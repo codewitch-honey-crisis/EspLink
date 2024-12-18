@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace EL
 {
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-    internal class EspDeviceAttribute : Attribute
+    public class EspDeviceAttribute : Attribute
     {
         public EspDeviceAttribute(string name, uint magic, uint id = 0)
         {
@@ -35,7 +35,7 @@ namespace EL
             Name = name;
         }
     }
-    abstract class EspDevice
+    public abstract class EspDevice
     {
         private WeakReference<EspLink> _parent;
         protected EspDevice(EspLink parent)

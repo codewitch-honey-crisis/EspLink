@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace EL
 {
-	partial class EspLink
+	public partial class EspLink
 	{
 		static readonly Regex _bootloaderRegex = new Regex(@"boot:0x([0-9a-fA-F]+)(.*waiting for download)?", RegexOptions.CultureInvariant | RegexOptions.Compiled);
 		bool _inBootloader = false;
@@ -189,7 +189,6 @@ namespace EL
 		{ 
 			int prog = int.MinValue;
 			progress?.Report(prog++);
-			GetOrOpenPort().Handshake = Handshake.None;
 			Exception lastErr = null;
 			var connected = false;
 			for (var i = 0; i < attempts; ++i)
