@@ -169,7 +169,19 @@ namespace EL
 					}
 				}
 			}
-			CliUtility.ParseAndSet(args, null, typeof(Program));
+#if !DEBUG
+			try
+			{
+#endif
+				CliUtility.ParseAndSet(args, null, typeof(Program));
+#if !DEBUG
+			}
+			catch(Exception ex)
+			{
+				Console.Error.WriteLine("Error: "+ex.Message);
+				return 1;
+			}
+#endif
 			if(help)
 			{
 				CliUtility.PrintUsage(CliUtility.GetSwitches(null,typeof(Program)));
@@ -193,8 +205,10 @@ namespace EL
 					var psi = new ProcessStartInfo()
 					{
 						FileName = updaterpath,
-						UseShellExecute = true
+						UseShellExecute = true,
+						CreateNoWindow = true
 					};
+					Console.WriteLine("Updating esplink.exe...");
 					var proc = Process.Start(psi);
 				}
 				else
@@ -206,7 +220,7 @@ namespace EL
 			}
 			try
 			{
-				
+
 				using (var link = new EspLink(port))
 				{
 					var latest = await TryGetLaterVersionAsync();
@@ -217,7 +231,8 @@ namespace EL
 						Console.WriteLine();
 					}
 					var cts = new CancellationTokenSource();
-					Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs e) => {
+					Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs e) =>
+					{
 						cts.Cancel();
 					};
 					var mon = new Thread(new ParameterizedThreadStart(MonitorThreadProc));
@@ -241,7 +256,7 @@ namespace EL
 					await Console.Out.FlushAsync();
 					using (var stm = System.IO.File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
-						await link.FlashAsync(tok, stm, 16*1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
+						await link.FlashAsync(tok, stm, 16 * 1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
 						Console.WriteLine();
 						Console.WriteLine("Hard resetting");
 						await Console.Out.FlushAsync();
@@ -256,6 +271,13 @@ namespace EL
 				Console.WriteLine("Operation canceled by user. Device may be in invalid state.");
 				return 1;
 			}
+#if !DEBUG
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine("Error: "+ex.Message);
+				return 1;
+			}
+#endif
 		}
 
 	}
