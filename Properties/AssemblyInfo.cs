@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("FlashTest2")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("FlashTest2")]
-[assembly: AssemblyCopyright("Copyright ©  2024")]
+[assembly: AssemblyCompany("honey the codewitch")]
+[assembly: AssemblyProduct("esplink")]
+[assembly: AssemblyCopyright("Copyright ©  2024-2025 by honey the codewitch")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
