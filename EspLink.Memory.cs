@@ -10,25 +10,25 @@ namespace EL
 {
     partial class EspLink
     {
-        Task<(uint Value, byte[] Data)> BeginWriteMemoryAsync(uint size, uint blocks, uint blocksize, uint offset, CancellationToken cancellationToken, int timeout = -1) {
+        async Task<(uint Value, byte[] Data)> BeginWriteMemoryAsync(uint size, uint blocks, uint blocksize, uint offset, CancellationToken cancellationToken, int timeout = -1) {
             //"""Start downloading an application image to RAM"""
             // TODO: check we're not going to overwrite a running stub with this data
             var pck = new byte[16];
             PackUInts(pck, 0, new uint[] { size, blocks, blocksize, offset });
-            return CheckCommandAsync(
+            return await CheckCommandAsync(
                 "enter RAM download mode",
                 Device.ESP_MEM_BEGIN,
                 pck, 0,cancellationToken, timeout
             );
         }
-        Task<(uint Value, byte[] Data)> WriteMemoryBlockAsync(byte[] data, int index, int length, uint seq, CancellationToken cancellationToken, int timeout = -1)
+        async Task<(uint Value, byte[] Data)> WriteMemoryBlockAsync(byte[] data, int index, int length, uint seq, CancellationToken cancellationToken, int timeout = -1)
         {
             // """Send a block of an image to RAM"""
             var pck = new byte[16 + length];
             PackUInts(pck, 0, new uint[] { (uint)length, seq, 0, 0 });
             Array.Copy(data, index, pck, 16, length);
 
-            return CheckCommandAsync(
+            return await CheckCommandAsync(
             "write to target RAM",
             Device.ESP_MEM_DATA,
             pck, Checksum(pck, 16,length),cancellationToken, timeout);
