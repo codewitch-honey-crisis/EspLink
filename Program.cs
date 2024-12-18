@@ -1,17 +1,35 @@
-﻿using System;
+﻿using Cli;
+
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+
+using static System.Net.WebRequestMethods;
 
 namespace EL
 {
 
 	internal class Program
 	{
-		
+		static readonly Regex _scrapeTags = new Regex(@"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)<\/h2>",RegexOptions.IgnoreCase);
+		const string tagUrl = "https://github.com/codewitch-honey-crisis/EspLink/releases";
+		const string updateUrlFormat = "https://github.com/codewitch-honey-crisis/EspLink/releases/download/{0}/esplink.exe";
+		[CmdArg("update",Group="update",Description ="Updates the application if a new version is available")]
+		static bool update = false;
+		[CmdArg("help", Group = "help", Description = "Displays this screen and exits")]
+		static bool help = false;
+		[CmdArg(Ordinal = 0,Optional =false,ElementName = "port",Description ="The COM port to use")]
+		static string port = null;
+		[CmdArg(Ordinal = 1, Optional = false,ElementName ="file", Description ="The input file")]
+		static FileInfo input = null;
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -55,19 +73,153 @@ namespace EL
 			}
 			cts.Cancel();
 		}
-		static async Task<int> Main(string[] args)
+		static async Task DownloadVersionAsync(Version version)
 		{
-			if (args.Length < 2)
+			var localpath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+			using (var http = new HttpClient())
 			{
-				return -1;
+				var url = string.Format(updateUrlFormat, version.ToString());
+				using (var input = await http.GetStreamAsync(url))
+				{
+					var filepath = Path.Combine(localpath, "esplink.exe.download");
+					try
+					{
+						System.IO.File.Delete(filepath);
+					}
+					catch { }
+					using (var output = System.IO.File.OpenWrite(filepath))
+					{
+						await input.CopyToAsync(output);
+					}
+				}
 			}
-			var port = args[0];
-			var path = args[1];
+		}
+		static async Task<Version> TryGetLaterVersionAsync()
+		{
 			try
 			{
+				var ver = Assembly.GetExecutingAssembly().GetName().Version;
+				using (var http = new HttpClient())
+				{
+					var versions = new List<Version>();
+					using (var reader = new StreamReader(await http.GetStreamAsync(tagUrl)))
+					{
+						var match = _scrapeTags.Match(reader.ReadToEnd());
+						while (match.Success)
+						{
+							Version v;
+							if (Version.TryParse(match.Groups[1].Value, out v))
+							{
+								versions.Add(v);
+							}
+							match = match.NextMatch();
+						}
+					}
+					versions.Sort();
+					var result = versions[versions.Count - 1];
+					if (result > ver)
+					{
+						return result;
+					}
+				}
+			}
+			catch { }
+			return new Version();
+		}
+		static async Task ExtractUpdaterAsync()
+		{
+			var localpath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+			using(Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("EL.EspLinkUpdater.exe"))
+			{
+				if(input==null)
+				{
+					throw new Exception("Could not extract updater");
+				}
+				using (var output = System.IO.File.OpenWrite(Path.Combine(localpath, "EspLinkUpdater.exe")))
+				{
+					await input.CopyToAsync(output);
+				}
+			}
+		}
+		static async Task<int> Main(string[] args)
+		{
+			var updaterpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.exe");
+
+			// in case we just updated:
+			if (args.Length == 1)
+			{
+				if (args[0] == "/finish_updater")
+				{
+					try
+					{
+
+						if (System.IO.File.Exists(updaterpath))
+						{
+							System.IO.File.Delete(updaterpath);
+							Console.WriteLine("Application updated.");
+							return 0;
+						}
+					}
+					catch
+					{
+						Console.WriteLine("Warning: Could not delete temporary files.");
+
+						return 0;
+					}
+				}
+			}
+			CliUtility.ParseAndSet(args, null, typeof(Program));
+			if(help)
+			{
+				CliUtility.PrintUsage(CliUtility.GetSwitches(null,typeof(Program)));
+				var latest = await TryGetLaterVersionAsync();
+
+				if (Assembly.GetExecutingAssembly().GetName().Version < latest)
+				{
+					Console.WriteLine();
+					Console.WriteLine("An update is available.");
+				
+				}
+				return 0;
+			}
+			if (update)
+			{
+				var latest = await TryGetLaterVersionAsync();
+				if (Assembly.GetExecutingAssembly().GetName().Version < latest)
+				{
+					await DownloadVersionAsync(latest);
+					await ExtractUpdaterAsync();
+					var psi = new ProcessStartInfo()
+					{
+						FileName = updaterpath,
+						UseShellExecute = true
+					};
+					var proc = Process.Start(psi);
+				}
+				else
+				{
+					Console.WriteLine("A later version was not available. No update was performed.");
+					return 1;
+				}
+				return 0;
+			}
+			try
+			{
+				
 				using (var link = new EspLink(port))
 				{
+					var latest = await TryGetLaterVersionAsync();
+
+					if (Assembly.GetExecutingAssembly().GetName().Version < latest)
+					{
+						Console.WriteLine("An update is available. Run with /update to update the utility");
+						Console.WriteLine();
+					}
 					var cts = new CancellationTokenSource();
+					Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs e) => {
+						cts.Cancel();
+					};
 					var mon = new Thread(new ParameterizedThreadStart(MonitorThreadProc));
 					mon.Start(cts);
 
@@ -87,7 +239,7 @@ namespace EL
 					Console.WriteLine($"Changed baud rate to {link.BaudRate}");
 					Console.WriteLine("Flashing... ");
 					await Console.Out.FlushAsync();
-					using (var stm = File.Open(path, FileMode.Open, FileAccess.Read))
+					using (var stm = System.IO.File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
 						await link.FlashAsync(tok, stm, 16*1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
 						Console.WriteLine();
@@ -105,5 +257,6 @@ namespace EL
 				return 1;
 			}
 		}
+
 	}
 }

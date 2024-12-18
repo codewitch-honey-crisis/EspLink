@@ -60,6 +60,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CliUtility.cs" />
     <Compile Include="Devices\Esp32Device.cs" />
     <Compile Include="Devices\Esp32S3Device.cs" />
     <Compile Include="EspLink.Command.cs" />
@@ -102,6 +103,9 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="EspLinkUpdater.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
