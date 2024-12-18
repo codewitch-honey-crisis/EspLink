@@ -178,7 +178,6 @@ namespace EL
 					
 				}
 			}
-		
 			return result;
 		}
 		public void Connect(bool reset=true, int attempts=3, bool sync = true,int timeout=-1, IProgress<int> progress = null)

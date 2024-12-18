@@ -2,7 +2,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -16,8 +18,28 @@ using static System.Net.WebRequestMethods;
 
 namespace EL
 {
-
-	internal class Program
+	class OffsetConverter : UInt32Converter
+	{
+		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+		{
+			if (value is string str)
+			{
+				if (str.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+				{
+					str = str.Substring(2);
+					uint res;
+					if (!uint.TryParse(str, NumberStyles.HexNumber, CultureInfo.InvariantCulture.NumberFormat, out res))
+					{
+						// force the base to throw an error
+						return base.ConvertFrom(context, culture, value);
+					}
+					return res;
+				}
+			}
+			return base.ConvertFrom(context, culture, value);
+		}
+	}
+	class Program
 	{
 		static readonly Regex _scrapeTags = new Regex(@"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)<\/h2>",RegexOptions.IgnoreCase);
 		const string tagUrl = "https://github.com/codewitch-honey-crisis/EspLink/releases";
@@ -26,10 +48,17 @@ namespace EL
 		static bool update = false;
 		[CmdArg("help", Group = "help", Description = "Displays this screen and exits")]
 		static bool help = false;
+		[CmdArg(Name = "ports", Group = "ports", ElementName = "ports", Description = "List the COM ports")]
+		static bool ports = false;
 		[CmdArg(Ordinal = 0,Optional =false,ElementName = "port",Description ="The COM port to use")]
 		static string port = null;
 		[CmdArg(Ordinal = 1, Optional = false,ElementName ="file", Description ="The input file")]
 		static FileInfo input = null;
+		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.OffsetConverter", ElementName = "offset", Description = "The flash address to load the file at")]
+		static uint offset = 0x10000;
+		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
+		static int baud = 115200*4;
+
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -218,6 +247,20 @@ namespace EL
 				}
 				return 0;
 			}
+			if (ports)
+			{
+				foreach (var port in EspLink.GetComPorts())
+				{
+					if (!string.IsNullOrEmpty(port.Pid))
+					{
+						Console.WriteLine($"{port.Name} - {port.Description}, {port.Pid}, {port.Vid}");
+					} else
+					{
+						Console.WriteLine($"{port.Name} - {port.Description}");
+					}
+				}
+				return 0;
+			}
 			try
 			{
 
@@ -250,9 +293,13 @@ namespace EL
 					await link.RunStubAsync(tok, link.DefaultTimeout, new EspProgress());
 					Console.WriteLine();
 					await Console.Out.FlushAsync();
-					await link.SetBaudRateAsync(115200, 115200 * 4, tok, link.DefaultTimeout);
-					Console.WriteLine($"Changed baud rate to {link.BaudRate}");
-					Console.WriteLine("Flashing... ");
+					if (baud != 115200)
+					{
+						await link.SetBaudRateAsync(115200, baud, tok, link.DefaultTimeout);
+						Console.WriteLine($"Changed baud rate to {link.BaudRate}");
+					}
+					
+					Console.WriteLine($"Flashing to offset 0x{offset.ToString("X")}... ");
 					await Console.Out.FlushAsync();
 					using (var stm = System.IO.File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
@@ -268,6 +315,7 @@ namespace EL
 			}
 			catch (OperationCanceledException)
 			{
+				Console.WriteLine();
 				Console.WriteLine("Operation canceled by user. Device may be in invalid state.");
 				return 1;
 			}
