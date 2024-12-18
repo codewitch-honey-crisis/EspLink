@@ -13,12 +13,16 @@ namespace EL
     partial class EspLink
     {
         const int ERASE_REGION_TIMEOUT_PER_MB = 30;
-        async Task<uint> FlashDeflBeginAsync(CancellationToken cancellationToken, uint size, uint compsize, uint offset, int timeout=-1) {
+        async Task<uint> FlashDeflBeginAsync(CancellationToken cancellationToken, uint size, uint compsize, uint offset, uint blockSize, int timeout=-1) {
             CheckReady();
             // Start downloading compressed data to Flash (performs an erase)
             // Returns number of blocks (size self.FLASH_WRITE_SIZE) to write.
-            var num_blocks = (compsize + Device.FLASH_WRITE_SIZE - 1) / Device.FLASH_WRITE_SIZE;
-            var erase_blocks = (size + Device.FLASH_WRITE_SIZE - 1) / Device.FLASH_WRITE_SIZE;
+            if(blockSize==0)
+            {
+                blockSize = Device.FLASH_WRITE_SIZE;
+            }
+            var num_blocks = (compsize + blockSize - 1) / blockSize;
+            var erase_blocks = (size + blockSize- 1) / blockSize;
             uint write_size;
             if (IsStub) {
                 write_size = (
@@ -26,7 +30,7 @@ namespace EL
                 );
             }
 
-            write_size = erase_blocks * Device.FLASH_WRITE_SIZE;
+            write_size = erase_blocks * blockSize;
             if(timeout>-1)
             {
                 var tm = (int)( ERASE_REGION_TIMEOUT_PER_MB * ((float)write_size / 1e6));
@@ -40,7 +44,7 @@ namespace EL
             // ROM performs the erase up front
 
             var data = new byte[(!IsStub && Device.SUPPORTS_ENCRYPTED_FLASH) ? 20 : 16];
-            var flash_write_size = Device.FLASH_WRITE_SIZE;
+            var flash_write_size = blockSize;
             if (!BitConverter.IsLittleEndian) {
                 flash_write_size = SwapBytes(flash_write_size);
                 write_size = SwapBytes(write_size);
@@ -104,21 +108,25 @@ namespace EL
             }
             throw lastErr;
         }
-        public void Flash(Stream uncompressedInput, uint offset, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
+        public void Flash(Stream uncompressedInput, uint offset, uint blockSize = 0, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
         {
-            FlashAsync(CancellationToken.None,uncompressedInput, offset, writeAttempts, finalize, timeout,progress).Wait();
+            FlashAsync(CancellationToken.None,uncompressedInput, offset, blockSize, writeAttempts, finalize, timeout,progress).Wait();
         }
-        public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint offset, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
+        public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint blockSize, uint offset, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
         {
             CheckReady();
+            if(blockSize==0)
+            {
+                blockSize = Device.FLASH_WRITE_SIZE;
+            }
             var stm = new MemoryStream(uncompressedInput.Length<=int.MaxValue?(int)uncompressedInput.Length:int.MaxValue);
             CompressToZlibStream(uncompressedInput, stm);
             stm.Position = 0;
             var uclen = (uint)uncompressedInput.Length;
             var cln = (uint)stm.Length;
             progress?.Report(0);
-            var blockCount =  await FlashDeflBeginAsync(cancellationToken, uclen, cln, offset, timeout);
-            var block = new byte[Device.FLASH_WRITE_SIZE];
+            var blockCount =  await FlashDeflBeginAsync(cancellationToken, uclen, cln, offset,blockSize, timeout);
+            var block = new byte[blockSize];
             for(int i = 0;i<blockCount;++i)
             {
                 var bytesRead = stm.Read(block, 0, block.Length);

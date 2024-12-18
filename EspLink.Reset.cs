@@ -78,7 +78,6 @@ namespace EL
 		static bool ClassicResetImpl(SerialPort port)
 		{
 			if (port == null || !port.IsOpen) { return false; }
-
 			port.DtrEnable = false;
 			port.RtsEnable = true;
 			port.DtrEnable = port.DtrEnable;
@@ -100,6 +99,7 @@ namespace EL
 					strategy = HardResetStrategy;
 				}
 				SerialPort port = GetOrOpenPort();
+				
 				if (port != null && port.IsOpen)
 				{
 					// On targets with USB modes, the reset process can cause the port to

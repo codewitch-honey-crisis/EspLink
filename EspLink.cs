@@ -189,7 +189,7 @@ namespace EL
 		{ 
 			int prog = int.MinValue;
 			progress?.Report(prog++);
-			
+			GetOrOpenPort().Handshake = Handshake.None;
 			Exception lastErr = null;
 			var connected = false;
 			for (var i = 0; i < attempts; ++i)
@@ -226,8 +226,8 @@ namespace EL
 	
 			var magic = await ReadRegAsync( 0x40001000, cancellationToken, 3000);
 			CreateDevice(magic);
-			_inBootloader = true;		
-			if(_baudRate!=115200)
+			_inBootloader = true;
+			if (_baudRate!=115200)
 			{
 				await SetBaudRateAsync( 115200, _baudRate, cancellationToken,timeout);
 			}

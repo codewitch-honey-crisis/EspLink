@@ -89,7 +89,7 @@ namespace EL
 					await Console.Out.FlushAsync();
 					using (var stm = File.Open(path, FileMode.Open, FileAccess.Read))
 					{
-						await link.FlashAsync(tok, stm, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
+						await link.FlashAsync(tok, stm, 16*1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
 						Console.WriteLine();
 						Console.WriteLine("Hard resetting");
 						await Console.Out.FlushAsync();
