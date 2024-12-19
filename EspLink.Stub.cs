@@ -1,8 +1,6 @@
 ﻿using Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,14 +36,26 @@ namespace EL
 				throw new InvalidOperationException("Not connected");
 			}
 			var chipName = Device.CHIP_NAME;
-			var name = chipName.Replace("(", "").Replace(")", "").Replace("-", "").ToLowerInvariant();
-			var respath = $"{GetType().Namespace}.Stubs.{name}.json";
+			var jsonName = chipName.Replace("(", "").Replace(")", "").Replace("-", "").ToLowerInvariant();
+			var names = GetType().Assembly.GetManifestResourceNames();
+			// since VS puts them under the root namespace and we don't necessarily know what that is, we look through everything
+			var search = $".Stubs.{jsonName}.json";
+			string respath = null;
+			for (int i = 0;i<names.Length;++i)
+			{
+				var name = names[i];
+				if(name.EndsWith(search, StringComparison.Ordinal))
+				{
+					respath = name; break;
+				}
+
+			}
+			if (respath == null)
+			{
+				throw new NotSupportedException($"The chip \"{chipName}\" is not supported");
+			}
 			using (var stm = GetType().Assembly.GetManifestResourceStream(respath))
 			{
-				if(stm==null)
-				{
-					throw new NotSupportedException($"The chip \"{chipName}\" is not supported");
-				}
 				var reader = new StreamReader(stm, Encoding.UTF8);
 				dynamic json = JsonObject.Parse(reader);
 				var entryPoint = (uint)json.entry;
@@ -53,7 +63,7 @@ namespace EL
 				var textStart = (uint)json.text_start;
 				var data = Convert.FromBase64String(json.data);
 				var dataStart = (uint)json.data_start;
-				return new EspStub(name,entryPoint,text, textStart, data,dataStart);
+				return new EspStub(jsonName,entryPoint,text, textStart, data,dataStart);
 			}
 		}
 		async Task WriteStubEntryAsync(CancellationToken cancellationToken, uint offset, byte[] data, int timeout = -1,IProgress<int> progress=null)
@@ -101,9 +111,6 @@ namespace EL
 			}
 			await FinishWriteMemoryAsync(cancellationToken, stub.EntryPoint);
 			// we're expecting something from the stub
-#if TRACE
-			Console.Error.WriteLine("Waiting for stub response...");
-#endif
 			// waiting for a special SLIP frame from the stub: 0xC0 0x4F 0x48 0x41 0x49 0xC0
 			// it's not a response packet so we can't use the normal code with it
 			var frame = ReadFrame(cancellationToken, timeout);

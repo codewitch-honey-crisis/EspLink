@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace EL
 {
-    partial class EspLink
+	partial class EspLink
     {
         async Task<(uint Value, byte[] Data)> BeginWriteMemoryAsync(uint size, uint blocks, uint blocksize, uint offset, CancellationToken cancellationToken, int timeout = -1) {
             //"""Start downloading an application image to RAM"""

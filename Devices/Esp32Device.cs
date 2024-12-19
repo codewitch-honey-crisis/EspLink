@@ -30,13 +30,9 @@ namespace EL
         {
             get
             {
-#if false
                 const byte SPIFLASH_RDID = 0x9F;
 
                 return Parent.SpiFlashCommand(SPIFLASH_RDID, Array.Empty<byte>(), 24, 0, 0, 0, Parent.DefaultTimeout);
-#else
-                return 0x0;
-#endif
             }
         }
         public Esp32Device(EspLink parent) : base(parent) { }

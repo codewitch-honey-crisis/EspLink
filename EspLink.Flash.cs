@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace EL
 {
-    partial class EspLink
+	partial class EspLink
     {
         const int ERASE_REGION_TIMEOUT_PER_MB = 30;
         async Task<uint> FlashDeflBeginAsync(CancellationToken cancellationToken, uint size, uint compsize, uint offset, uint blockSize, int timeout=-1) {

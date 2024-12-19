@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO.Ports;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
@@ -13,15 +9,6 @@ namespace EL
 	{
 		internal async Task<(uint Value, byte[] Data)> CommandAsync(CancellationToken cancellationToken, int op=-1, byte[] data=null, uint chk = 0, int timeout = -1)
 		{
-#if TRACE
-			string tim = timeout < 0 ? "none" : timeout.ToString();
-			Console.Error.Write($"command op=0x{op.ToString("X2")} data len={data?.Length} wait_response=1 timeout={tim} data=");
-			if (data != null && data.Length > 0)
-			{
-				TraceHex(data, 0, data.Length, Console.Error);
-			}
-			Console.Error.WriteLine();
-#endif
 			if (op != -1)
 			{
 				if(data == null) data = Array.Empty<byte>();
@@ -37,14 +24,6 @@ namespace EL
 					continue;
 				}
 				var ret = UnpackOpPacket(frame, 0);
-#if TRACE
-				Console.Error.Write($"Received full packet: ");
-				if (frame.Length > 0)
-				{
-					TraceHex(frame, 0, frame.Length, Console.Error);
-				}
-				Console.Error.WriteLine();
-#endif
 				if (-1 == op || op == ret.Op)
 				{
 					return (ret.Chk, ret.Data);
@@ -61,15 +40,6 @@ namespace EL
 		}
 		internal async Task<uint> CommandResultAsync(CancellationToken cancellationToken, int op = -1, byte[] data = null, uint chk = 0, int timeout = -1)
 		{
-#if TRACE
-			string tim = timeout < 0 ? "none" : timeout.ToString();
-			Console.Error.Write($"command op=0x{op.ToString("X2")} data len={data?.Length} wait_response=1 timeout={tim} data=");
-			if (data != null && data.Length > 0)
-			{
-				TraceHex(data, 0, data.Length, Console.Error);
-			}
-			Console.Error.WriteLine();
-#endif
 			if (op != -1)
 			{
 				if (data == null) data = Array.Empty<byte>();
@@ -85,14 +55,6 @@ namespace EL
 					continue;
 				}
 				var ret = UnpackOpPacket(frame, 0);
-#if TRACE
-				Console.Error.Write($"Received full packet: ");
-				if (frame.Length > 0)
-				{
-					TraceHex(frame, 0, frame.Length, Console.Error);
-				}
-				Console.Error.WriteLine();
-#endif
 				if (-1 == op || op == ret.Op)
 				{
 					if (ret.Data == null || ret.Data.Length == 0)

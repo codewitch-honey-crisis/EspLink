@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Ports;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,11 +57,6 @@ namespace EL
 				await port.BaseStream.WriteAsync(toWrite, 0, toWrite.Length);
 				cancellationToken.ThrowIfCancellationRequested();
 				await port.BaseStream.FlushAsync();
-#if TRACE
-				Console.Error.Write($"Wrote {toWrite.Length} bytes: ");
-				TraceHex(toWrite, 0, toWrite.Length, Console.Error);
-				Console.Error.WriteLine();
-#endif
 			}
 			finally
 			{
@@ -112,15 +102,6 @@ namespace EL
 				}
 			}
 			int count = bytes.Count;
-#if TRACE
-			Console.Error.Write($"Read {count+2} bytes: ");
-			var traceData = new byte[count+2];
-			traceData[0] = _FrameDelimiter;
-			traceData[traceData.Length - 1] = _FrameDelimiter;
-			bytes.CopyTo(traceData, 1);
-			TraceHex(traceData, 0, traceData.Length, Console.Error);
-			Console.Error.WriteLine();
-#endif
 			for (var i = 0; i < bytes.Count; i++)
 			{
 				var b = bytes[i];

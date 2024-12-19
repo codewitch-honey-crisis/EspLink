@@ -76,7 +76,6 @@
     <Compile Include="EspLink.SerialPort.cs" />
     <Compile Include="EspLink.SpiFlash.cs" />
     <Compile Include="EspLink.Stub.cs" />
-    <Compile Include="EspLink.Trace.cs" />
     <Compile Include="Json\JsonElement.cs" />
     <Compile Include="Json\JsonException.cs" />
     <Compile Include="Json\JsonParser.cs" />
