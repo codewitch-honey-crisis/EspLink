@@ -131,55 +131,7 @@ namespace EL
 			}
 			throw new ArgumentException("The COM port was not found", nameof(name));
 		}
-		public static List<(string Name, string Id, string LongName, string Vid, string Pid, string Description)> GetComPorts()
-		{
-			var result = new List<(string Name,string Id,string LongName, string Vid, string Pid, string Description)>();
-			ManagementClass pnpCls = new ManagementClass("Win32_PnPEntity");
-			ManagementObjectCollection pnpCol = pnpCls.GetInstances();
 
-			foreach (var pnpObj in pnpCol)
-			{
-				var clsid = pnpObj["classGuid"];
-
-				if (clsid!=null && ((string)clsid).Equals("{4d36e978-e325-11ce-bfc1-08002be10318}", StringComparison.OrdinalIgnoreCase))
-				{
-					string deviceId = pnpObj["deviceid"].ToString();
-
-					int vidIndex = deviceId.IndexOf("VID_");
-					string vid = null;
-					if (vidIndex > -1)
-					{
-						string startingAtVid = deviceId.Substring(vidIndex);
-						vid = startingAtVid.Substring(0, 8); // vid is four characters long
-
-					}
-					string pid = null;
-					int pidIndex = deviceId.IndexOf("PID_");
-					if (pidIndex > -1)
-					{
-						string startingAtPid = deviceId.Substring(pidIndex);
-						pid = startingAtPid.Substring(0, 8); // pid is four characters long
-					}
-
-					var idProp = pnpObj["deviceId"];
-					var nameProp = pnpObj["name"];
-					var descProp = pnpObj["description"];
-					var name = nameProp.ToString();
-					var idx = name.IndexOf('(');
-					if(idx>-1)
-					{
-						var lidx = name.IndexOf(')', idx + 2);
-						if(lidx>-1)
-						{
-							name = name.Substring(idx + 1, lidx - idx - 1);
-						}
-					}
-					result.Add((Name: name, Id: idProp.ToString(), LongName: nameProp?.ToString(), Vid: vid, Pid: pid, Description: descProp?.ToString()));
-					
-				}
-			}
-			return result;
-		}
 		public void Connect(bool reset=true, int attempts=3, bool sync = true,int timeout=-1, IProgress<int> progress = null)
 		{
 			ConnectAsync(reset, attempts, sync,CancellationToken.None,timeout, progress).Wait();

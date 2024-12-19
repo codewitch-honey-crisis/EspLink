@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Ports;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -18,7 +19,7 @@ using static System.Net.WebRequestMethods;
 
 namespace EL
 {
-	class OffsetConverter : UInt32Converter
+	class HexOrDecConverter : UInt32Converter
 	{
 		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
 		{
@@ -39,6 +40,38 @@ namespace EL
 			return base.ConvertFrom(context, culture, value);
 		}
 	}
+	class HandshakeConverter : TypeConverter
+	{
+		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+		{
+			if(sourceType == typeof(string))
+			{
+				return true;
+			}
+			return base.CanConvertFrom(context, sourceType);
+		}
+		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+		{
+			if (value is string str)
+			{
+				if(0==string.Compare("hardware",str,StringComparison.OrdinalIgnoreCase))
+				{
+					return Handshake.RequestToSend;
+				} else if (0 == string.Compare("software", str, StringComparison.OrdinalIgnoreCase))
+				{
+					return Handshake.XOnXOff;
+				}
+				else if (0 == string.Compare("both", str, StringComparison.OrdinalIgnoreCase))
+				{
+					return Handshake.RequestToSendXOnXOff;
+				} else if (0 == string.Compare("none", str, StringComparison.OrdinalIgnoreCase))
+				{
+					return Handshake.None;
+				} 
+			}
+			return base.ConvertFrom(context, culture, value);
+		}
+	}
 	class Program
 	{
 		static readonly Regex _scrapeTags = new Regex(@"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)<\/h2>",RegexOptions.IgnoreCase);
@@ -54,11 +87,14 @@ namespace EL
 		static string port = null;
 		[CmdArg(Ordinal = 1, Optional = false,ElementName ="file", Description ="The input file")]
 		static FileInfo input = null;
-		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.OffsetConverter", ElementName = "offset", Description = "The flash address to load the file at")]
+		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "offset", Description = "The flash address to load the file at. Defaults to 0x10000")]
 		static uint offset = 0x10000;
+		[CmdArg(Name = "chunk", Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "kilobytes", Description = "The size of blocks to use in kilobytes. Defaults to 16")]
+		static uint chunk = 16;
 		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
 		static int baud = 115200*4;
-
+		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware, software, both or none (default).")]
+		static Handshake handshake = Handshake.None;
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -274,6 +310,7 @@ namespace EL
 					var tok = cts.Token;
 					Console.Write("Connecting...");
 					await Console.Out.FlushAsync();
+					link.SerialHandshake = handshake;
 					await link.ConnectAsync(true, 3, true, tok, link.DefaultTimeout, new EspProgress());
 					Console.WriteLine("\bdone!");
 					await Console.Out.FlushAsync();
@@ -292,7 +329,7 @@ namespace EL
 					await Console.Out.FlushAsync();
 					using (var stm = System.IO.File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
-						await link.FlashAsync(tok, stm, 16 * 1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
+						await link.FlashAsync(tok, stm, chunk * 1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
 						Console.WriteLine();
 						Console.WriteLine("Hard resetting");
 						await Console.Out.FlushAsync();

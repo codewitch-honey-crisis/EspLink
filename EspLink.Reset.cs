@@ -99,9 +99,11 @@ namespace EL
 					strategy = HardResetStrategy;
 				}
 				SerialPort port = GetOrOpenPort();
-				
 				if (port != null && port.IsOpen)
 				{
+					port.Handshake = Handshake.None;
+					port.DiscardInBuffer();
+
 					// On targets with USB modes, the reset process can cause the port to
 					// disconnect / reconnect during reset.
 					// This will retry reconnections on ports that
