@@ -88,9 +88,9 @@ namespace EL
 		[CmdArg(Name = "chunk", Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "kilobytes", Description = "The size of blocks to use in kilobytes. Defaults to 16")]
 		static uint chunk = 16;
 		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
-		static int baud = 115200*4;
-		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware, software, both or none (default).")]
-		static Handshake handshake = Handshake.None;
+		static int baud = 115200*8;
+		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware (default), software, both or none.")]
+		static Handshake handshake = Handshake.RequestToSend;
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -300,15 +300,19 @@ namespace EL
 					var cts = new CancellationTokenSource();
 					Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs e) =>
 					{
+						e.Cancel = true;
 						cts.Cancel();
 					};
 					
 					var tok = cts.Token;
+					Console.WriteLine($"{CliUtility.AssemblyTitle} v{CliUtility.AssemblyVersion}");
+					Console.WriteLine();
+					await Console.Out.FlushAsync();
 					Console.Write("Connecting...");
 					await Console.Out.FlushAsync();
 					link.SerialHandshake = handshake;
 					await link.ConnectAsync(true, 3, true, tok, link.DefaultTimeout, new EspProgress());
-					Console.WriteLine("\bdone!");
+					Console.WriteLine("done!");
 					await Console.Out.FlushAsync();
 					Console.WriteLine("Running stub... ");
 					await Console.Out.FlushAsync();

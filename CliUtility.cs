@@ -1591,6 +1591,16 @@ namespace Cli
 			return WordWrap(sb.ToString(), width, indent, startOffset);
 		}
 		/// <summary>
+		/// Returns the assembly version/>
+		/// </summary>
+		public static Version AssemblyVersion
+		{
+			get
+			{
+				return Assembly.GetEntryAssembly().GetName().Version;
+			}
+		}
+		/// <summary>
 		/// Returns the assembly title as set by the <see cref="AssemblyTitleAttribute" />
 		/// </summary>
 		public static string AssemblyTitle

@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("esplink")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Flashes ESP32 or ESP32S3 hardware")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("honey the codewitch")]
 [assembly: AssemblyProduct("esplink")]
-[assembly: AssemblyCopyright("Copyright ©  2024-2025 by honey the codewitch")]
+[assembly: AssemblyCopyright("Copyright © 2024-2025 by honey the codewitch")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -29,5 +29,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("0.4.3.0")]
-[assembly: AssemblyFileVersion("0.4.3.0")]
+[assembly: AssemblyVersion("0.4.4.0")]
+[assembly: AssemblyFileVersion("0.4.4.0")]
