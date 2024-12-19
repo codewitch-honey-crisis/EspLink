@@ -63,14 +63,14 @@ namespace EL
 			}
 			return -1;
 		}
-		private void _port_DataReceived(object sender, SerialDataReceivedEventArgs e)
+		private async void _port_DataReceived(object sender, SerialDataReceivedEventArgs e)
 		{
 			if(e.EventType==SerialData.Chars)
 			{
 				var port =(SerialPort)sender;
 				if (port.BytesToRead > 0) {
 					var ba = new byte[port.BytesToRead];
-					var len = port.Read(ba, 0, ba.Length);
+					var len = await port.BaseStream.ReadAsync(ba, 0, ba.Length);
 					for (int i = 0; i < len; i++)
 					{
 						_serialIncoming.Enqueue(ba[i]);
