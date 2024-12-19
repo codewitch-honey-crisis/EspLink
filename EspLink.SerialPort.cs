@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,8 +19,9 @@ namespace EL
 		{
 			if (_port == null)
 			{
-				_port = new SerialPort(_portName, 115200);
+				_port = new SerialPort(_portName, 115200, Parity.None, 8, StopBits.One);
 				_port.DataReceived += _port_DataReceived;
+				_port.ErrorReceived += _port_ErrorReceived;
 			}
 			if (!_port.IsOpen)
 			{
@@ -32,6 +34,12 @@ namespace EL
 			}
 			return _port;
 		}
+
+		private void _port_ErrorReceived(object sender, SerialErrorReceivedEventArgs e)
+		{
+			System.Diagnostics.Debug.WriteLine("Serial error: "+e.EventType.ToString());
+		}
+
 		int ReadByteNoBlock()
 		{
 			byte result;

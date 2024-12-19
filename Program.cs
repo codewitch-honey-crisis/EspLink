@@ -93,15 +93,7 @@ namespace EL
 				}
 			}
 		}
-		static void MonitorThreadProc(object state)
-		{
-			var cts = (CancellationTokenSource)state;
-			while(!Console.KeyAvailable)
-			{
-				Thread.Sleep(10);
-			}
-			cts.Cancel();
-		}
+		
 		static async Task DownloadVersionAsync(Version version)
 		{
 			var localpath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -278,11 +270,8 @@ namespace EL
 					{
 						cts.Cancel();
 					};
-					var mon = new Thread(new ParameterizedThreadStart(MonitorThreadProc));
-					mon.Start(cts);
-
+					
 					var tok = cts.Token;
-					Console.WriteLine("Press any key to cancel...");
 					Console.Write("Connecting...");
 					await Console.Out.FlushAsync();
 					await link.ConnectAsync(true, 3, true, tok, link.DefaultTimeout, new EspProgress());
@@ -309,7 +298,6 @@ namespace EL
 						await Console.Out.FlushAsync();
 						link.Reset();
 					}
-					mon.Abort();
 				}
 				return 0;
 			}
