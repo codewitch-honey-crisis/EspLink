@@ -1,5 +1,4 @@
-﻿using Json;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -31,40 +30,61 @@ namespace EL
 
 		EspStub GetStub()
 		{
-			if(Device==null)
+			if (Device == null)
 			{
 				throw new InvalidOperationException("Not connected");
 			}
 			var chipName = Device.CHIP_NAME;
-			var jsonName = chipName.Replace("(", "").Replace(")", "").Replace("-", "").ToLowerInvariant();
+			var resName = chipName.Replace("(", "").Replace(")", "").Replace("-", "").ToLowerInvariant();
 			var names = GetType().Assembly.GetManifestResourceNames();
 			// since VS puts them under the root namespace and we don't necessarily know what that is, we look through everything
-			var search = $".Stubs.{jsonName}.json";
-			string respath = null;
-			for (int i = 0;i<names.Length;++i)
+			var searchIdx = $".Stubs.{resName}.idx";
+			string idxPath = null;
+			string pathRoot = null;
+			for (int i = 0; i < names.Length; ++i)
 			{
 				var name = names[i];
-				if(name.EndsWith(search, StringComparison.Ordinal))
+				if (name.EndsWith(searchIdx, StringComparison.Ordinal))
 				{
-					respath = name; break;
+					idxPath = name;
+					pathRoot = idxPath.Substring(0, idxPath.Length - 4);
+					break;
 				}
-
 			}
-			if (respath == null)
+			if (idxPath == null)
 			{
 				throw new NotSupportedException($"The chip \"{chipName}\" is not supported");
 			}
-			using (var stm = GetType().Assembly.GetManifestResourceStream(respath))
+			uint entryPoint, textStart, dataStart;
+			using (var stm = GetType().Assembly.GetManifestResourceStream(idxPath))
 			{
-				var reader = new StreamReader(stm, Encoding.UTF8);
-				var json = (JsonObject)JsonObject.Parse(reader);
-				var entryPoint = (uint)(double)json["entry"];
-				var text = Convert.FromBase64String((string)json["text"]);
-				var textStart = (uint)(double)json["text_start"];
-				var data = Convert.FromBase64String((string)json["data"]);
-				var dataStart = (uint)(double)json["data_start"];
-				return new EspStub(jsonName,entryPoint,text, textStart, data,dataStart);
+				var ba = new byte[4];
+				stm.Read(ba, 0, 4);
+				entryPoint = BitConverter.ToUInt32(ba, 0);
+				stm.Read(ba, 0, 4);
+				textStart = BitConverter.ToUInt32(ba, 0);
+				stm.Read(ba, 0, 4);
+				dataStart = BitConverter.ToUInt32(ba, 0);
+				if (!BitConverter.IsLittleEndian)
+				{
+					entryPoint = SwapBytes(entryPoint);
+					textStart = SwapBytes(textStart);
+					dataStart = SwapBytes(dataStart);
+				}
 			}
+			byte[] text = null;
+			using (var stm = GetType().Assembly.GetManifestResourceStream($"{pathRoot}.text"))
+			{
+				text = new byte[stm.Length];
+				stm.Read(text, 0, text.Length);
+			}
+			byte[] data = null;
+			using (var stm = GetType().Assembly.GetManifestResourceStream($"{pathRoot}.data"))
+			{
+				data = new byte[stm.Length];
+				stm.Read(data, 0, data.Length);
+			}
+			return new EspStub(resName, entryPoint, text, textStart, data, dataStart);
 		}
 		async Task WriteStubEntryAsync(CancellationToken cancellationToken, uint offset, byte[] data, int timeout = -1,IProgress<int> progress=null)
 		{

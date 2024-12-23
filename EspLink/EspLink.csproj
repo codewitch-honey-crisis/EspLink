@@ -71,20 +71,18 @@
     <Compile Include="EspLink.SerialPort.cs" />
     <Compile Include="EspLink.SpiFlash.cs" />
     <Compile Include="EspLink.Stub.cs" />
-    <Compile Include="Json\JsonElement.cs" />
-    <Compile Include="Json\JsonException.cs" />
-    <Compile Include="Json\JsonParser.cs" />
-    <Compile Include="Json\JsonRunners.cs" />
-    <Compile Include="Json\JsonUtility.cs" />
-    <Compile Include="Json\JsonWriter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <Compile Include="EspLink.Lifetime.cs" />
-    <EmbeddedResource Include="Stubs\esp32.json" />
-    <EmbeddedResource Include="Stubs\esp32s3.json" />
+    <EmbeddedResource Include="Stubs\esp32.data" />
+    <EmbeddedResource Include="Stubs\esp32.idx" />
+    <EmbeddedResource Include="Stubs\esp32.text" />
+    <EmbeddedResource Include="Stubs\esp32s3.data" />
+    <EmbeddedResource Include="Stubs\esp32s3.idx" />
+    <EmbeddedResource Include="Stubs\esp32s3.text" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">
@@ -106,5 +104,8 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetDir)$(TargetFileName)" "$(SolutionDir)$(TargetFileName)"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>"$(SolutionDir)elstubgen.exe" $(SolutionDir)Stubs\ $(ProjectDir)\Stubs</PreBuildEvent>
   </PropertyGroup>
 </Project>
