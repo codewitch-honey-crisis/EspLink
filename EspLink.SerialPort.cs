@@ -129,6 +129,18 @@ namespace EL
 			}
 			Cleanup();
 		}
+		
+		public static (string Name, string Id, string LongName, string Vid, string Pid, string Description) FindComPort(string name)
+		{
+			foreach (var port in GetComPorts())
+			{
+				if (port.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+				{
+					return port;
+				}
+			}
+			throw new ArgumentException("The COM port was not found", nameof(name));
+		}
 		private static int GetComPortNum(string portName)
 		{
 			if (!string.IsNullOrEmpty(portName))

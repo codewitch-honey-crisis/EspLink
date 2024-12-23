@@ -273,6 +273,9 @@ namespace EL
 			}
 			if (ports)
 			{
+				Console.Error.WriteLine($"{CliUtility.AssemblyTitle} v{CliUtility.AssemblyVersion}");
+				Console.Error.WriteLine();
+
 				foreach (var port in EspLink.GetComPorts())
 				{
 					if (!string.IsNullOrEmpty(port.Pid))
@@ -294,7 +297,7 @@ namespace EL
 
 					if (Assembly.GetExecutingAssembly().GetName().Version < latest)
 					{
-						Console.WriteLine("An update is available. Run with /update to update the utility");
+						Console.WriteLine("An update is available. Run with /update to update the utility.");
 						Console.WriteLine();
 					}
 					var cts = new CancellationTokenSource();
@@ -311,7 +314,7 @@ namespace EL
 					Console.Write("Connecting...");
 					await Console.Out.FlushAsync();
 					link.SerialHandshake = handshake;
-					await link.ConnectAsync(true, 3, true, tok, link.DefaultTimeout, new EspProgress());
+					await link.ConnectAsync(EspConnectMode.Default, 3, false, tok, link.DefaultTimeout, new EspProgress());
 					Console.WriteLine("done!");
 					await Console.Out.FlushAsync();
 					Console.WriteLine("Running stub... ");
