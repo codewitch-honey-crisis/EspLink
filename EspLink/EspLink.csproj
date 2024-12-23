@@ -99,7 +99,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="EspLinkUpdater.exe" />
+    <EmbeddedResource Include="..\EspLinkUpdater.exe">
+      <Link>EspLinkUpdater.exe</Link>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
