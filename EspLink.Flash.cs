@@ -29,7 +29,7 @@ namespace EL
             write_size = erase_blocks * blockSize;
             if(timeout>-1)
             {
-                var tm = (int)( ERASE_REGION_TIMEOUT_PER_MB * ((float)write_size / 1e6));
+                var tm = (int)(1000*( ERASE_REGION_TIMEOUT_PER_MB * ((float)write_size / 1e6)));
                 if(tm<timeout)
                 {
                     tm = timeout;
@@ -91,7 +91,9 @@ namespace EL
                     await CheckCommandAsync(
                     $"write compressed data to flash after seq {seq}",
                     Device.ESP_FLASH_DEFL_DATA, pck, Checksum(data, 0, data.Length),cancellationToken, timeout);
+                    //System.Diagnostics.Debug.WriteLine("Wrote packet");
                     return;
+
                 }
                 catch (Exception e)
                 {

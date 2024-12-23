@@ -114,12 +114,14 @@ namespace EL
 			// waiting for a special SLIP frame from the stub: 0xC0 0x4F 0x48 0x41 0x49 0xC0
 			// it's not a response packet so we can't use the normal code with it
 			var frame = ReadFrame(cancellationToken, timeout);
-			if(frame.Length==4 && frame[0]==0x4f && frame[1]==0x48 && frame[2]==0x41 && frame[3]==0x49)
+			if (frame.Length == 4 && frame[0] == 0x4f && frame[1] == 0x48 && frame[2] == 0x41 && frame[3] == 0x49)
 			{
 				IsStub = true;
-				return;
 			}
-			throw new IOException("The stub was not successfully executed");
+			if (!IsStub)
+			{
+				throw new IOException("The stub was not successfully executed");
+			}
 		}
 	}
 }

@@ -182,6 +182,7 @@ namespace EL
 			{
 				throw lastErr;
 			}
+			GetOrOpenPort().DiscardInBuffer();
 			if (!detecting)
 			{
 				var magic = await ReadRegAsync(0x40001000, cancellationToken, timeout);

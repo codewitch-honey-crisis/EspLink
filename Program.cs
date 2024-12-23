@@ -9,6 +9,7 @@ using System.IO;
 using System.IO.Ports;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,6 +92,8 @@ namespace EL
 		static int baud = 115200*8;
 		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware (default), software, both or none.")]
 		static Handshake handshake = Handshake.RequestToSend;
+		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", Description = "The timeout for I/O operations, in seconds")]
+		static int timeout = 5;
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -293,6 +296,7 @@ namespace EL
 
 				using (var link = new EspLink(port))
 				{
+					link.DefaultTimeout = timeout > 0 ? timeout * 1000 : -1;
 					var latest = await TryGetLaterVersionAsync();
 
 					if (Assembly.GetExecutingAssembly().GetName().Version < latest)

@@ -14,7 +14,9 @@ namespace EL
 		string _portName;
 		SerialPort _port;
 		int _baudRate = 115200;
-		ConcurrentQueue<byte> _serialIncoming = new ConcurrentQueue<byte>();
+		//ConcurrentQueue<byte> _serialIncoming = new ConcurrentQueue<byte>();
+		readonly object _lock = new object();
+		Queue<byte> _serialIncoming = new Queue<byte>();	
 		Handshake _serialHandshake;
 		public Handshake SerialHandshake
 		{
@@ -32,6 +34,7 @@ namespace EL
 			if (_port == null)
 			{
 				_port = new SerialPort(_portName, 115200, Parity.None, 8, StopBits.One);
+				_port.ReceivedBytesThreshold = 1;
 				_port.DataReceived += _port_DataReceived;
 				_port.ErrorReceived += _port_ErrorReceived;
 				
@@ -56,26 +59,27 @@ namespace EL
 
 		int ReadByteNoBlock()
 		{
-			byte result;
-			if(_serialIncoming.TryDequeue(out result))
+			lock(_lock)
 			{
-				return result;
+				if(_serialIncoming.Count>0)
+				{
+					return _serialIncoming.Dequeue();
+				}
 			}
 			return -1;
 		}
-		private async void _port_DataReceived(object sender, SerialDataReceivedEventArgs e)
+		private void _port_DataReceived(object sender, SerialDataReceivedEventArgs e)
 		{
 			if(e.EventType==SerialData.Chars)
 			{
-				var port =(SerialPort)sender;
-				if (port.BytesToRead > 0) {
-					var ba = new byte[port.BytesToRead];
-					var len = await port.BaseStream.ReadAsync(ba, 0, ba.Length);
-					for (int i = 0; i < len; i++)
-					{
-						_serialIncoming.Enqueue(ba[i]);
-					}
-				}
+				int len = _port.BytesToRead;
+				int i = -1;
+				while(len-->0) 
+				{
+					i = _port.ReadByte();
+					if (i <0) break;
+					_serialIncoming.Enqueue((byte)i);
+				} 
 			}
 		}
 		public async Task SetBaudRateAsync(int oldBaud, int newBaud, CancellationToken cancellationToken,int timeout = -1)
