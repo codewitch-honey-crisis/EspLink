@@ -332,7 +332,7 @@ namespace EL
 						Console.WriteLine($"Changed baud rate to {link.BaudRate}");
 					}
 					
-					Console.WriteLine($"Flashing to offset 0x{offset.ToString("X")}... ");
+					Console.WriteLine($"Flashing to offset 0x{offset:X}... ");
 					await Console.Out.FlushAsync();
 					using (var stm = System.IO.File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
