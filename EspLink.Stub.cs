@@ -85,10 +85,24 @@ namespace EL
 			}
 			progress?.Report(100);
 		}
+		/// <summary>
+		/// Loads the stub for the device into device memory and executes it
+		/// </summary>
+		/// <param name="timeout">The timeout for the suboperations</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> which reports progress</param>
 		public void RunStub(int timeout=-1,IProgress<int> progress=null)
 		{
 			RunStubAsync(CancellationToken.None, timeout, progress).Wait();
 		}
+		/// <summary>
+		/// Asynchronously loads the stub for the device into device memory and executes it
+		/// </summary>
+		/// <param name="cancellationToken">A <see cref="CancellationToken"/> that can be used to cancel the operation</param>
+		/// <param name="timeout">The timeout for each suboperation</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> that will report the progress</param>
+		/// <returns>An awaitable <see cref="Task"/></returns>
+		/// <exception cref="InvalidOperationException">The device isn't connected or the stub is already running</exception>
+		/// <exception cref="IOException">The stub did not send an acknowledgment</exception>
 		public async Task RunStubAsync(CancellationToken cancellationToken, int timeout = -1, IProgress<int> progress=null)
 		{
 			if(Device==null)

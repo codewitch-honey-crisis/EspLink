@@ -9,12 +9,30 @@ using System.Threading.Tasks;
 
 namespace EL
 {
+	/// <summary>
+	/// The connection mode
+	/// </summary>
 	public enum EspConnectMode
 	{
+		/// <summary>
+		/// Standard attempt to reset into the bootloader and sync
+		/// </summary>
 		Default = 0,
+		/// <summary>
+		/// Do not reset first (assumes already in bootloader)
+		/// </summary>
 		NoReset = 1,
+		/// <summary>
+		/// Do not sync
+		/// </summary>
 		NoSync = 2,
+		/// <summary>
+		/// Do not reset or sync
+		/// </summary>
 		NoResetNoSync = 3,
+		/// <summary>
+		/// Use USB reset technique
+		/// </summary>
 		UsbReset=4
 	}
 	partial class EspLink
@@ -71,6 +89,9 @@ namespace EL
 				Delay = delay;
 			}
 		}
+		/// <summary>
+		/// True if the port is a USB serial JTAG connection, otherwise false
+		/// </summary>
 		public bool IsUsbSerialJtag
 		{
 			get
@@ -160,11 +181,27 @@ namespace EL
 			}
 			
 		}
-
+		/// <summary>
+		/// Connects to an Espressif MCU device
+		/// </summary>
+		/// <param name="mode">The <see cref="EspConnectMode"/> to use</param>
+		/// <param name="attempts">The number of attempts to make</param>
+		/// <param name="detecting">True if only detecting, and no actual connection should be made</param>
+		/// <param name="timeout">The timeout for each suboperation (not the total)</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress back</param>
 		public void Connect(EspConnectMode mode=EspConnectMode.Default, int attempts=3, bool detecting = false, int timeout = -1, IProgress<int> progress = null)
 		{
 			ConnectAsync(mode, attempts, detecting ,CancellationToken.None, timeout, progress).Wait();
 		}
+		/// <summary>
+		/// Asynchronously connects to an Espressif MCU device
+		/// </summary>
+		/// <param name="mode">The <see cref="EspConnectMode"/> to use</param>
+		/// <param name="attempts">The number of attempts to make</param>
+		/// <param name="detecting">True if only detecting, and no actual connection should be made</param>
+		/// <param name="cancellationToken">The <see cref="CancellationToken"/> to use which allows for cancelling the operation</param>
+		/// <param name="timeout">The timeout for each suboperation (not the total)</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress back</param>
 		public async Task ConnectAsync(EspConnectMode mode, int attempts, bool detecting, CancellationToken cancellationToken, int timeout = -1, IProgress<int> progress = null)
 		{
 			var strategy = BuildConnectStrategy(mode);
@@ -209,7 +246,7 @@ namespace EL
 				await Device.ConnectAsync(cancellationToken, DefaultTimeout);
 				if (_baudRate != 115200)
 				{
-					await SetBaudRateAsync(115200, _baudRate, cancellationToken, timeout);
+					await SetBaudRateAsync(_baudRate, cancellationToken, timeout);
 				}
 			}
 		}

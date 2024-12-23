@@ -328,7 +328,7 @@ namespace EL
 					await Console.Out.FlushAsync();
 					if (baud != 115200)
 					{
-						await link.SetBaudRateAsync(115200, baud, tok, link.DefaultTimeout);
+						await link.SetBaudRateAsync(baud, tok, link.DefaultTimeout);
 						Console.WriteLine($"Changed baud rate to {link.BaudRate}");
 					}
 					

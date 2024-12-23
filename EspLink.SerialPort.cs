@@ -18,6 +18,9 @@ namespace EL
 		readonly object _lock = new object();
 		Queue<byte> _serialIncoming = new Queue<byte>();	
 		Handshake _serialHandshake;
+		/// <summary>
+		/// The serial handshake protocol(s) to use
+		/// </summary>
 		public Handshake SerialHandshake
 		{
 			get => _serialHandshake;
@@ -52,7 +55,7 @@ namespace EL
 			return _port;
 		}
 
-		private void _port_ErrorReceived(object sender, SerialErrorReceivedEventArgs e)
+		void _port_ErrorReceived(object sender, SerialErrorReceivedEventArgs e)
 		{
 			System.Diagnostics.Debug.WriteLine("Serial error: "+e.EventType.ToString());
 		}
@@ -68,7 +71,7 @@ namespace EL
 			}
 			return -1;
 		}
-		private void _port_DataReceived(object sender, SerialDataReceivedEventArgs e)
+		void _port_DataReceived(object sender, SerialDataReceivedEventArgs e)
 		{
 			if(e.EventType==SerialData.Chars)
 			{
@@ -82,8 +85,16 @@ namespace EL
 				} 
 			}
 		}
-		public async Task SetBaudRateAsync(int oldBaud, int newBaud, CancellationToken cancellationToken,int timeout = -1)
+		/// <summary>
+		/// Asynchronously changes the baud rate
+		/// </summary>
+		/// <param name="newBaud">The new baud rate</param>
+		/// <param name="cancellationToken">A <see cref="CancellationToken"/> that can be used to cancel the operation</param>
+		/// <param name="timeout">The timeout in milliseconds</param>
+		/// <returns>A waitable <see cref="Task"/></returns>
+		public async Task SetBaudRateAsync(int newBaud, CancellationToken cancellationToken,int timeout = -1)
 		{
+			int oldBaud = _baudRate;
 			_baudRate = newBaud;
 			if (Device == null || _inBootloader == false)
 			{
@@ -101,8 +112,9 @@ namespace EL
 				_port.DiscardInBuffer();
 			}
 		}
-		
-		
+		/// <summary>
+		/// Gets or sets the baud rate
+		/// </summary>
 		public int BaudRate
 		{
 			get
@@ -113,10 +125,13 @@ namespace EL
 			{
 				if(value!=_baudRate)
 				{
-					SetBaudRateAsync(_baudRate, value, CancellationToken.None,DefaultTimeout).Wait();			
+					SetBaudRateAsync(value, CancellationToken.None,DefaultTimeout).Wait();			
 				}
 			}
 		}
+		/// <summary>
+		/// Closes the link
+		/// </summary>
 		public void Close()
 		{
 			if (_port != null)
@@ -133,7 +148,12 @@ namespace EL
 			}
 			Cleanup();
 		}
-		
+		/// <summary>
+		/// Finds a COM port with a particular name
+		/// </summary>
+		/// <param name="name">The port name</param>
+		/// <returns>A tuple indicating the name, id, long name, VID, PID, and description of the port</returns>
+		/// <exception cref="ArgumentException">The port was not found</exception>
 		public static (string Name, string Id, string LongName, string Vid, string Pid, string Description) FindComPort(string name)
 		{
 			foreach (var port in GetComPorts())
@@ -152,7 +172,7 @@ namespace EL
 				if (portName.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
 				{
 					int result;
-					if (int.TryParse(portName.Substring(4), System.Globalization.NumberStyles.Number, CultureInfo.InvariantCulture.NumberFormat, out result))
+					if (int.TryParse(portName.Substring(3), System.Globalization.NumberStyles.Number, CultureInfo.InvariantCulture.NumberFormat, out result))
 					{
 						return result;
 					}
@@ -160,7 +180,11 @@ namespace EL
 			}
 			return 0;
 		}
-		public static List<(string Name, string Id, string LongName, string Vid, string Pid, string Description)> GetComPorts()
+		/// <summary>
+		/// Retrieves a list of the COM ports
+		/// </summary>
+		/// <returns>A read-only list of tuples indicating the name, id, long name, VID, PID, and description of the port</returns>
+		public static IReadOnlyList<(string Name, string Id, string LongName, string Vid, string Pid, string Description)> GetComPorts()
 		{
 			var result = new List<(string Name, string Id, string LongName, string Vid, string Pid, string Description)>();
 			ManagementClass pnpCls = new ManagementClass("Win32_PnPEntity");

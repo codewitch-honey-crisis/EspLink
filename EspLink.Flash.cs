@@ -106,11 +106,32 @@ namespace EL
             }
             throw lastErr;
         }
+        /// <summary>
+        /// Flashes a binary image to a device
+        /// </summary>
+        /// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
+        /// <param name="offset">The offset in the flash region where the write is to begin</param>
+        /// <param name="blockSize">The size of each block to write</param>
+        /// <param name="writeAttempts">The number of attempts to write each block before failing</param>
+        /// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
+        /// <param name="timeout">The timeout for each suboperation</param>
+        /// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
         public void Flash(Stream uncompressedInput, uint offset, uint blockSize = 0, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
         {
             FlashAsync(CancellationToken.None,uncompressedInput, offset, blockSize, writeAttempts, finalize, timeout,progress).Wait();
         }
-        public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint blockSize, uint offset, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
+		/// <summary>
+		/// Asynchronously flashes a binary image to a device
+		/// </summary>
+		/// <param name="cancellationToken">The cancellation token to allow for the operation to be canceled</param>
+        /// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
+		/// <param name="offset">The offset in the flash region where the write is to begin</param>
+		/// <param name="blockSize">The size of each block to write</param>
+		/// <param name="writeAttempts">The number of attempts to write each block before failing</param>
+		/// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
+		/// <param name="timeout">The timeout for each suboperation</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
+		public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint blockSize, uint offset, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
         {
             CheckReady();
             if(blockSize==0)
@@ -166,12 +187,10 @@ namespace EL
 			}
 
 			// Calculate the zlib footer (Adler-32 checksum) for the compressed data
-			byte[] adler32Checksum = CalculateAdler32Checksum(inputStream);
+			byte[] adler32Checksum = Adler32Checksum(inputStream);
 			compressedStream.Write(adler32Checksum, 0, adler32Checksum.Length);
 		}
-		
-		// Method to calculate Adler-32 checksum
-		static byte[] CalculateAdler32Checksum(Stream stream)
+		static byte[] Adler32Checksum(Stream stream)
 		{
 			const uint MOD_ADLER = 65521;
 			long position = stream.Position;

@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 namespace EL
 {
-	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-    public class EspDeviceAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    class EspDeviceAttribute : Attribute
     {
         public EspDeviceAttribute(string name, uint magic, uint id = 0)
         {
@@ -20,7 +20,7 @@ namespace EL
 		public uint Id { get; set; }
 
 	}
-	public struct EspPartitionEntry {
+    struct EspPartitionEntry {
         public uint Offset { get; } 
         public uint Size { get;  } 
 		public string Name { get; }
@@ -31,6 +31,9 @@ namespace EL
             Name = name;
         }
     }
+    /// <summary>
+    /// Represents the base class for an Espressif MCU device
+    /// </summary>
     public abstract class EspDevice
     {
         private WeakReference<EspLink> _parent;
