@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,6 +19,23 @@ namespace EL
 	}
 	partial class EspLink
 	{
+		static readonly Regex _bootloaderRegex = new Regex(@"boot:0x([0-9a-fA-F]+)(.*waiting for download)?", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+		bool _inBootloader = false;
+		void CheckReady(bool checkConnected = true)
+		{
+			if (checkConnected)
+			{
+				if (Device == null)
+				{
+					throw new InvalidOperationException("The device is not connected");
+				}
+			}
+			if (!_inBootloader)
+			{
+				throw new InvalidOperationException("The bootloader is not entered");
+			}
+		}
+
 		async Task SyncAsync(int timeout, CancellationToken cancellationToken, IProgress<int> progress, int prog)
 		{
 			var data = new byte[] { 0x07, 0x07, 0x12, 0x20, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
