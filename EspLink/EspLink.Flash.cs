@@ -106,32 +106,32 @@ namespace EL
             }
             throw lastErr;
         }
-        /// <summary>
-        /// Flashes a binary image to a device
-        /// </summary>
-        /// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
-        /// <param name="offset">The offset in the flash region where the write is to begin</param>
-        /// <param name="blockSize">The size of each block to write</param>
-        /// <param name="writeAttempts">The number of attempts to write each block before failing</param>
-        /// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
-        /// <param name="timeout">The timeout for each suboperation</param>
-        /// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
-        public void Flash(Stream uncompressedInput, uint offset, uint blockSize = 0, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
+		/// <summary>
+		/// Flashes a binary image to a device
+		/// </summary>
+		/// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
+		/// <param name="blockSize">The size of each block to write</param>
+		/// <param name="offset">The offset in the flash region where the write is to begin</param>
+		/// <param name="writeAttempts">The number of attempts to write each block before failing</param>
+		/// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
+		/// <param name="timeout">The timeout for each suboperation</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
+		public void Flash(Stream uncompressedInput, uint blockSize = 0, uint offset =0x10000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
         {
-            FlashAsync(CancellationToken.None,uncompressedInput, offset, blockSize, writeAttempts, finalize, timeout,progress).Wait();
+            FlashAsync(CancellationToken.None,uncompressedInput,blockSize, offset, writeAttempts, finalize, timeout,progress).Wait();
         }
 		/// <summary>
 		/// Asynchronously flashes a binary image to a device
 		/// </summary>
 		/// <param name="cancellationToken">The cancellation token to allow for the operation to be canceled</param>
-        /// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
-		/// <param name="offset">The offset in the flash region where the write is to begin</param>
+		/// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
 		/// <param name="blockSize">The size of each block to write</param>
+		/// <param name="offset">The offset in the flash region where the write is to begin</param>
 		/// <param name="writeAttempts">The number of attempts to write each block before failing</param>
 		/// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
 		/// <param name="timeout">The timeout for each suboperation</param>
 		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
-		public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint blockSize, uint offset, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
+		public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint blockSize=0, uint offset=0x10000, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
         {
             CheckReady();
             if(blockSize==0)

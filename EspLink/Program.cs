@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using File = System.IO.File;
 namespace EL
 {
 	class HexOrDecConverter : UInt32Converter
@@ -82,8 +83,8 @@ namespace EL
 		static string port = null;
 		[CmdArg(Ordinal = 1, Optional = false,ElementName ="file", Description ="The input file")]
 		static FileInfo input = null;
-		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "offset", Description = "The flash address to load the file at. Defaults to 0x10000")]
-		static uint offset = 0x10000;
+		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "offset", Description = "The flash address to load the file at. Defaults to 0x10000 (or 0x8000 for partitions)")]
+		static uint offset = 0xFFFFFFFF;
 		[CmdArg(Name = "chunk", Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "kilobytes", Description = "The size of blocks to use in kilobytes. Defaults to 16")]
 		static uint chunk = 16;
 		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
@@ -92,6 +93,8 @@ namespace EL
 		static Handshake handshake = Handshake.RequestToSend;
 		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", Description = "The timeout for I/O operations, in seconds")]
 		static int timeout = 5;
+		[CmdArg(Name = "partition", Optional = true, ElementName = "partition", Description = "Flashes a partition table from a CSV or binary file")]
+		static bool partition = false;
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -329,12 +332,28 @@ namespace EL
 						await link.SetBaudRateAsync(baud, tok, link.DefaultTimeout);
 						Console.WriteLine($"Changed baud rate to {link.BaudRate}");
 					}
-					
+					if(input.FullName.EndsWith(".csv",StringComparison.OrdinalIgnoreCase))
+					{
+						partition = true;
+					}
+					if(offset==0xFFFFFFFF)
+					{
+						offset = partition ? (uint)0x8000 : 0x10000;
+					}
 					Console.WriteLine($"Flashing to offset 0x{offset:X}... ");
 					await Console.Out.FlushAsync();
-					using (var stm = System.IO.File.Open(input.FullName, FileMode.Open, FileAccess.Read))
+					using (FileStream stm = File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
-						await link.FlashAsync(tok, stm, chunk * 1024, 0x10000, 3, false, link.DefaultTimeout, new EspProgress());
+						var iscsv = partition && input.FullName.EndsWith(".csv",StringComparison.OrdinalIgnoreCase);
+						if (iscsv)
+						{
+							TextReader reader = new StreamReader(stm);
+							await link.FlashPartitionAsync(tok, reader, chunk * 1024, offset, 3, false, link.DefaultTimeout, new EspProgress());
+						}
+						else
+						{
+							await link.FlashAsync(tok, stm, chunk * 1024, offset, 3, false, link.DefaultTimeout, new EspProgress());
+						}
 						Console.WriteLine();
 						Console.WriteLine("Hard resetting");
 						await Console.Out.FlushAsync();

@@ -76,12 +76,22 @@ namespace EL
 			{
 				int len = _port.BytesToRead;
 				int i = -1;
-				while(len-->0) 
+				lock (_lock)
 				{
-					i = _port.ReadByte();
-					if (i <0) break;
-					_serialIncoming.Enqueue((byte)i);
-				} 
+					try
+					{
+						while (len-- > 0)
+						{
+							i = _port.ReadByte();
+							if (i < 0) break;
+							_serialIncoming.Enqueue((byte)i);
+						}
+					}
+					catch
+					{
+
+					}
+				}
 			}
 		}
 		/// <summary>

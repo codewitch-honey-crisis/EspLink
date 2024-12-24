@@ -28,7 +28,7 @@ namespace EL
 	{
 		public bool IsStub { get; private set; }
 
-		EspStub GetStub()
+		async Task<EspStub> GetStubAsync()
 		{
 			if (Device == null)
 			{
@@ -59,11 +59,11 @@ namespace EL
 			using (var stm = GetType().Assembly.GetManifestResourceStream(idxPath))
 			{
 				var ba = new byte[4];
-				stm.Read(ba, 0, 4);
+				await stm.ReadAsync(ba, 0, 4);
 				entryPoint = BitConverter.ToUInt32(ba, 0);
-				stm.Read(ba, 0, 4);
+				await stm.ReadAsync(ba, 0, 4);
 				textStart = BitConverter.ToUInt32(ba, 0);
-				stm.Read(ba, 0, 4);
+				await stm.ReadAsync(ba, 0, 4);
 				dataStart = BitConverter.ToUInt32(ba, 0);
 				if (!BitConverter.IsLittleEndian)
 				{
@@ -76,13 +76,13 @@ namespace EL
 			using (var stm = GetType().Assembly.GetManifestResourceStream($"{pathRoot}.text"))
 			{
 				text = new byte[stm.Length];
-				stm.Read(text, 0, text.Length);
+				await stm.ReadAsync(text, 0, text.Length);
 			}
 			byte[] data = null;
 			using (var stm = GetType().Assembly.GetManifestResourceStream($"{pathRoot}.data"))
 			{
 				data = new byte[stm.Length];
-				stm.Read(data, 0, data.Length);
+				await stm.ReadAsync(data, 0, data.Length);
 			}
 			return new EspStub(resName, entryPoint, text, textStart, data, dataStart);
 		}
@@ -134,7 +134,7 @@ namespace EL
 				throw new InvalidOperationException("Stub already running");
 			}
 			
-			var stub = GetStub();
+			var stub = await GetStubAsync();
 			if(stub.Text!=null)
 			{
 				await WriteStubEntryAsync(cancellationToken, stub.TextStart, stub.Text, timeout,progress);

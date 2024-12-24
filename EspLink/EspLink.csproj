@@ -66,6 +66,7 @@
     <Compile Include="EspLink.Frame.cs" />
     <Compile Include="EspLink.Memory.cs" />
     <Compile Include="EspLink.Pack.cs" />
+    <Compile Include="EspLink.Partititions.cs" />
     <Compile Include="EspLink.Registers.cs" />
     <Compile Include="EspLink.Reset.cs" />
     <Compile Include="EspLink.SerialPort.cs" />

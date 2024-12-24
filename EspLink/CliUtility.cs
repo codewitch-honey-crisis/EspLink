@@ -2036,14 +2036,7 @@ namespace Cli
 							
 						}
 					}
-					else if (cmdSw.Type == CmdSwitchType.Simple)
-					{
-						_ReflSetValue(member,target, true);
-					}
-					else
-					{
-						_ReflSetValue(member, target,value);
-					}
+					_ReflSetValue(member,target, value);
 				}
 			}
 		}
