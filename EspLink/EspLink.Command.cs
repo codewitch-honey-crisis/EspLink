@@ -18,7 +18,7 @@ namespace EL
 			}
 			for (var i = 0; i < 100; ++i)
 			{
-				var frame = ReadFrame(cancellationToken, timeout);
+				var frame = await ReadFrameAsync(cancellationToken, timeout);
 				if (frame.Length == 4 && frame[0] == 0x4f && frame[1] == 0x48 && frame[2] == 0x41 && frame[3] == 0x49)
 				{
 					// stub loaded frame. ignore.
@@ -50,7 +50,7 @@ namespace EL
 			}
 			for (var i = 0; i < 100; ++i)
 			{
-				var frame = ReadFrame(cancellationToken, timeout);
+				var frame = await ReadFrameAsync(cancellationToken, timeout);
 				if (frame.Length < 8)
 				{
 					continue;

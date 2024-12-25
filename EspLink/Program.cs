@@ -12,6 +12,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using static System.Net.Mime.MediaTypeNames;
+
 using File = System.IO.File;
 namespace EL
 {
@@ -68,11 +70,43 @@ namespace EL
 			return base.ConvertFrom(context, culture, value);
 		}
 	}
+	class SerialTypeConverter : TypeConverter
+	{
+		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+		{
+			if (sourceType == typeof(string))
+			{
+				return true;
+			}
+			return base.CanConvertFrom(context, sourceType);
+		}
+		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+		{
+			if (value is string str)
+			{
+				if (0 == string.Compare("auto", str, StringComparison.OrdinalIgnoreCase))
+				{
+					return EspSerialType.Autodetect;
+				}
+				else if (0 == string.Compare("standard", str, StringComparison.OrdinalIgnoreCase))
+				{
+					return EspSerialType.Standard;
+				}
+				else if (0 == string.Compare("jtag", str, StringComparison.OrdinalIgnoreCase))
+				{
+					return EspSerialType.UsbSerialJtag;
+				}
+			}
+			return base.ConvertFrom(context, culture, value);
+		}
+	}
+
 	class Program
 	{
 		static readonly Regex _scrapeTags = new Regex(@"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)<\/h2>",RegexOptions.IgnoreCase);
 		const string tagUrl = "https://github.com/codewitch-honey-crisis/EspLink/releases";
-		const string updateUrlFormat = "https://github.com/codewitch-honey-crisis/EspLink/releases/download/{0}/esplink.exe";
+		const string updateUrlFormat = "https://github.com/codewitch-honey-crisis/EspLink/releases/download/{0}/esplink.zip";
+		const string updateUrlFormatFallback = "https://github.com/codewitch-honey-crisis/EspLink/releases/download/{0}/esplink.exe";
 		[CmdArg("update",Group="update",Description ="Updates the application if a new version is available")]
 		static bool update = false;
 		[CmdArg("help", Group = "help", Description = "Displays this screen and exits")]
@@ -89,6 +123,8 @@ namespace EL
 		static uint chunk = 16;
 		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
 		static int baud = 115200*8;
+		[CmdArg(Name = "type", Optional = true, ElementName = "type", ElementConverter = "EL.SerialTypeConverter", Description = "The type of serial connection: auto (default), standard, or jtag")]
+		static EspSerialType serialType = EspSerialType.Autodetect;
 		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware (default), software, both or none.")]
 		static Handshake handshake = Handshake.RequestToSend;
 		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", Description = "The timeout for I/O operations, in seconds")]
@@ -137,17 +173,37 @@ namespace EL
 			using (var http = new HttpClient())
 			{
 				var url = string.Format(updateUrlFormat, version.ToString());
-				using (var input = await http.GetStreamAsync(url))
+				try
 				{
-					var filepath = Path.Combine(localpath, "esplink.exe.download");
-					try
+					using (var input = await http.GetStreamAsync(url))
 					{
-						System.IO.File.Delete(filepath);
+						var filepath = Path.Combine(localpath, "esplink.zip.download");
+						try
+						{
+							System.IO.File.Delete(filepath);
+						}
+						catch { }
+						using (var output = System.IO.File.OpenWrite(filepath))
+						{
+							await input.CopyToAsync(output);
+						}
 					}
-					catch { }
-					using (var output = System.IO.File.OpenWrite(filepath))
+				}
+				catch
+				{
+					url = string.Format(updateUrlFormatFallback, version.ToString());
+					using (var input = await http.GetStreamAsync(url))
 					{
-						await input.CopyToAsync(output);
+						var filepath = Path.Combine(localpath, "esplink.exe.download");
+						try
+						{
+							System.IO.File.Delete(filepath);
+						}
+						catch { }
+						using (var output = System.IO.File.OpenWrite(filepath))
+						{
+							await input.CopyToAsync(output);
+						}
 					}
 				}
 			}
@@ -187,36 +243,68 @@ namespace EL
 		static async Task ExtractUpdaterAsync()
 		{
 			var localpath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			using(Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("EL.EspLinkUpdater.exe"))
+			var names = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+			foreach(var name in names)
 			{
-				if(input==null)
+				if (name.Contains("EspLinkUpdater"))
 				{
-					throw new Exception("Could not extract updater");
-				}
-				using (var output = System.IO.File.OpenWrite(Path.Combine(localpath, "EspLinkUpdater.exe")))
-				{
-					await input.CopyToAsync(output);
+					using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
+					{
+						if (input == null)
+						{
+							throw new Exception("Could not extract updater");
+						}
+						var fname = name;
+						var idx = fname.IndexOf('.');
+						if(idx>-1)
+						{
+							fname = fname.Substring(idx+1);
+						}
+						try
+						{
+							File.Delete(fname);
+						}
+						catch { }
+						using (var output = System.IO.File.OpenWrite(Path.Combine(localpath, fname)))
+						{
+							await input.CopyToAsync(output);
+						}
+					}
 				}
 			}
 		}
 		static async Task<int> Main(string[] args)
 		{
-			var updaterpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.exe");
+			string updaterpath;
+			if (CliUtility.IsWindows)
+			{
+				updaterpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.exe");
+			}
+			else
+			{
+				updaterpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.dll");
+			}
 
 			// in case we just updated:
 			if (args.Length == 1)
 			{
-				if (args[0] == "/finish_updater")
+				if (args[0] == "/finish_updater" || args[0]=="--finish_updater")
 				{
 					try
 					{
-
-						if (System.IO.File.Exists(updaterpath))
-						{
-							System.IO.File.Delete(updaterpath);
-							Console.WriteLine("Application updated.");
-							return 0;
+						foreach (var file in Directory.GetFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.*")) {
+							try
+							{
+								if (System.IO.File.Exists(file))
+								{
+									System.IO.File.Delete(file);
+								}
+							}
+							catch
+							{
+							}
 						}
+						Console.WriteLine("Application updated");
 					}
 					catch
 					{
@@ -261,11 +349,15 @@ namespace EL
 					await ExtractUpdaterAsync();
 					var psi = new ProcessStartInfo()
 					{
-						FileName = updaterpath,
-						UseShellExecute = true,
-						CreateNoWindow = true
+						FileName = CliUtility.IsWindows?updaterpath:"dotnet",
+						CreateNoWindow = true,
+						Arguments=""
 					};
-					Console.WriteLine("Updating esplink.exe...");
+					if(!CliUtility.IsWindows)
+					{
+						psi.Arguments += updaterpath;
+					}
+					Console.WriteLine("Updating esplink...");
 					var proc = Process.Start(psi);
 				}
 				else
@@ -280,22 +372,17 @@ namespace EL
 				Console.Error.WriteLine($"{CliUtility.AssemblyTitle} v{CliUtility.AssemblyVersion}");
 				Console.Error.WriteLine();
 
-				foreach (var port in EspLink.GetComPorts())
+				foreach (var port in EspLink.GetPorts())
 				{
-					if (!string.IsNullOrEmpty(port.Pid))
-					{
-						Console.WriteLine($"{port.Name} - {port.Description}, {port.Pid}, {port.Vid}");
-					} else
-					{
-						Console.WriteLine($"{port.Name} - {port.Description}");
-					}
+					Console.WriteLine(port);
+					
 				}
 				return 0;
 			}
 			try
 			{
 
-				using (var link = new EspLink(port))
+				using (var link = new EspLink(port,serialType))
 				{
 					link.DefaultTimeout = timeout > 0 ? timeout * 1000 : -1;
 					var latest = await TryGetLaterVersionAsync();
@@ -357,7 +444,7 @@ namespace EL
 						Console.WriteLine();
 						Console.WriteLine("Hard resetting");
 						await Console.Out.FlushAsync();
-						link.Reset();
+						await link.ResetAsync(tok);
 					}
 				}
 				return 0;

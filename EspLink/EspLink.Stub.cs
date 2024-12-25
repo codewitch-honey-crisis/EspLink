@@ -1,31 +1,30 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace EL
 {
-	public struct EspStub
-	{
-		public string Name { get; }
-		public uint EntryPoint { get; }
-		public byte[] Text { get; }
-		public uint TextStart { get; }
-		public byte[] Data { get; }
-		public uint DataStart { get; }
-		public EspStub(string name, uint entryPoint, byte[] text, uint textStart, byte[] data, uint dataStart)
-		{
-			Name = name;
-			EntryPoint = entryPoint;
-			Text = text;
-			TextStart = textStart;
-			Data = data;
-			DataStart = dataStart;
-		}
-	}
 	partial class EspLink
 	{
+		struct EspStub
+		{
+			public string Name { get; }
+			public uint EntryPoint { get; }
+			public byte[] Text { get; }
+			public uint TextStart { get; }
+			public byte[] Data { get; }
+			public uint DataStart { get; }
+			public EspStub(string name, uint entryPoint, byte[] text, uint textStart, byte[] data, uint dataStart)
+			{
+				Name = name;
+				EntryPoint = entryPoint;
+				Text = text;
+				TextStart = textStart;
+				Data = data;
+				DataStart = dataStart;
+			}
+		}
 		public bool IsStub { get; private set; }
 
 		async Task<EspStub> GetStubAsync()
@@ -147,7 +146,7 @@ namespace EL
 			// we're expecting something from the stub
 			// waiting for a special SLIP frame from the stub: 0xC0 0x4F 0x48 0x41 0x49 0xC0
 			// it's not a response packet so we can't use the normal code with it
-			var frame = ReadFrame(cancellationToken, timeout);
+			var frame = await ReadFrameAsync(cancellationToken, timeout);
 			if (frame.Length == 4 && frame[0] == 0x4f && frame[1] == 0x48 && frame[2] == 0x41 && frame[3] == 0x49)
 			{
 				IsStub = true;

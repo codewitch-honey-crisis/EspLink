@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics;
 using System.IO.Ports;
-using System.Management;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,10 +13,10 @@ namespace EL
 		string _portName;
 		SerialPort _port;
 		int _baudRate = 115200;
-		//ConcurrentQueue<byte> _serialIncoming = new ConcurrentQueue<byte>();
 		readonly object _lock = new object();
 		Queue<byte> _serialIncoming = new Queue<byte>();	
 		Handshake _serialHandshake;
+		bool _isUsbSerialJTag = false;
 		/// <summary>
 		/// The serial handshake protocol(s) to use
 		/// </summary>
@@ -31,16 +31,24 @@ namespace EL
 			
 			}
 		}
-		SerialPort GetOrOpenPort()
+		/// <summary>
+		/// True if the port is a USB serial JTAG connection, otherwise false
+		/// </summary>
+		public bool IsUsbSerialJtag
+		{
+			get
+			{
+				return _isUsbSerialJTag;
+			}
+		}
+		SerialPort GetOrOpenPort(bool throwOnError=false)
 		{
 			if (_port == null)
 			{
 				_port = new SerialPort(_portName, 115200, Parity.None, 8, StopBits.One);
 				_port.ReceivedBytesThreshold = 1;
 				_port.DataReceived += _port_DataReceived;
-				_port.ErrorReceived += _port_ErrorReceived;
-				
-				
+				_port.ErrorReceived += _port_ErrorReceived;				
 			}
 			if (!_port.IsOpen)
 			{
@@ -49,11 +57,41 @@ namespace EL
 					_port.Open();
 				}
 
-				catch { return null; }
+				catch {
+					if (throwOnError) { throw; }
+					return null; 
+				}
 			}
 			return _port;
 		}
-
+		void DiscardInput()
+		{
+			var port = GetOrOpenPort(false);
+			if (port != null && port.IsOpen)
+			{
+				port.DiscardInBuffer();
+			}
+			lock (_lock)
+			{
+				_serialIncoming.Clear();
+			}
+		}
+		async Task<byte[]> ReadExistingInputAsync()
+		{
+			var port = GetOrOpenPort(false);
+			while (port != null && port.IsOpen && port.BytesToRead>0)
+			{
+				await Task.Delay(10);
+			}
+			byte[] result;
+			lock (_lock)
+			{
+				result = new byte[_serialIncoming.Count];
+				_serialIncoming.CopyTo(result, 0);
+				_serialIncoming.Clear();
+			}
+			return result;
+		}
 		void _port_ErrorReceived(object sender, SerialErrorReceivedEventArgs e)
 		{
 			System.Diagnostics.Debug.WriteLine("Serial error: "+e.EventType.ToString());
@@ -117,8 +155,8 @@ namespace EL
 			if(_port!=null&&_port.IsOpen)
 			{
 				_port.BaudRate = newBaud;
-				Thread.Sleep(50); // ignore crap.
-				_port.DiscardInBuffer();
+				await Task.Delay(50); // ignore crap.
+				DiscardInput();//_port.DiscardInBuffer();
 			}
 		}
 		/// <summary>
@@ -158,99 +196,100 @@ namespace EL
 			Cleanup();
 		}
 		/// <summary>
-		/// Finds a COM port with a particular name
-		/// </summary>
-		/// <param name="name">The port name</param>
-		/// <returns>A tuple indicating the name, id, long name, VID, PID, and description of the port</returns>
-		/// <exception cref="ArgumentException">The port was not found</exception>
-		public static (string Name, string Id, string LongName, string Vid, string Pid, string Description) FindComPort(string name)
-		{
-			foreach (var port in GetComPorts())
-			{
-				if (port.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-				{
-					return port;
-				}
-			}
-			throw new ArgumentException("The COM port was not found", nameof(name));
-		}
-		private static int GetComPortNum(string portName)
-		{
-			if (!string.IsNullOrEmpty(portName))
-			{
-				if (portName.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
-				{
-					int result;
-					if (int.TryParse(portName.Substring(3), System.Globalization.NumberStyles.Number, CultureInfo.InvariantCulture.NumberFormat, out result))
-					{
-						return result;
-					}
-				}
-			}
-			return 0;
-		}
-		/// <summary>
 		/// Retrieves a list of the COM ports
 		/// </summary>
 		/// <returns>A read-only list of tuples indicating the name, id, long name, VID, PID, and description of the port</returns>
-		public static IReadOnlyList<(string Name, string Id, string LongName, string Vid, string Pid, string Description)> GetComPorts()
+		public static string[] GetPorts()
 		{
-			var result = new List<(string Name, string Id, string LongName, string Vid, string Pid, string Description)>();
-			ManagementClass pnpCls = new ManagementClass("Win32_PnPEntity");
-			ManagementObjectCollection pnpCol = pnpCls.GetInstances();
+			return SerialPort.GetPortNames();
+		}
 
-			foreach (var pnpObj in pnpCol)
+		static readonly Regex _udveadmScrape = new Regex("ID_MODEL=([0-9_A-Fa-f]+)", RegexOptions.CultureInvariant);
+		static EspSerialType AutodetectSerialTypeUnix(string portName)
+		{
+			try
 			{
-				var clsid = pnpObj["classGuid"];
-
-				if (clsid != null && ((string)clsid).Equals("{4d36e978-e325-11ce-bfc1-08002be10318}", StringComparison.OrdinalIgnoreCase))
+				// get the USB Model Id of the serial port
+				var psi = new ProcessStartInfo()
 				{
-					string deviceId = pnpObj["deviceid"].ToString();
-
-					int vidIndex = deviceId.IndexOf("VID_");
-					string vid = null;
-					if (vidIndex > -1)
+					FileName = "udevadm",
+					CreateNoWindow = true,
+					RedirectStandardOutput = true,
+					Arguments = $"info --query=all --name={portName}"
+				};
+				using (var proc = Process.Start(psi))
+				{
+					proc.WaitForExit();
+					var output = proc.StandardOutput.ReadToEnd();
+					var match = _udveadmScrape.Match(output);
+					if (match.Success && match.Groups.Count > 1)
 					{
-						string startingAtVid = deviceId.Substring(vidIndex);
-						vid = startingAtVid.Substring(0, 8); // vid is four characters long
-
-					}
-					string pid = null;
-					int pidIndex = deviceId.IndexOf("PID_");
-					if (pidIndex > -1)
-					{
-						string startingAtPid = deviceId.Substring(pidIndex);
-						pid = startingAtPid.Substring(0, 8); // pid is four characters long
-					}
-
-					var idProp = pnpObj["deviceId"];
-					var nameProp = pnpObj["name"];
-					var descProp = pnpObj["description"];
-					var name = nameProp.ToString();
-					var idx = name.IndexOf('(');
-					if (idx > -1)
-					{
-						var lidx = name.IndexOf(')', idx + 2);
-						if (lidx > -1)
+						if (match.Groups[1].Value == "1001")
 						{
-							name = name.Substring(idx + 1, lidx - idx - 1);
+							return EspSerialType.UsbSerialJtag;
 						}
 					}
-					result.Add((Name: name, Id: idProp.ToString(), LongName: nameProp?.ToString(), Vid: vid, Pid: pid, Description: descProp?.ToString()));
-
 				}
+				return EspSerialType.Standard;
 			}
-			result.Sort((x, y) => {
-				var xn = GetComPortNum(x.Name);
-				var yn = GetComPortNum(y.Name);
-				var cmp = xn.CompareTo(yn);
-				if(cmp==0)
+			catch {
+				return EspSerialType.Autodetect;
+			}
+		}
+		static EspSerialType AutodetectSerialTypeWindows(string portName)
+		{
+			try
+			{
+				var result = new List<(string Name, string Id, string LongName, string Vid, string Pid, string Description)>();
+				var mgmtType = Type.GetType("System.Management.ManagementClass, System.Management, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", true);
+				dynamic pnpCls = Activator.CreateInstance(mgmtType, new object[] { "Win32_PnPEntity" });
+
+				var pnpCol = pnpCls.GetInstances();
+
+				foreach (var pnpObj in pnpCol)
 				{
-					cmp = String.Compare(x.Name, y.Name, StringComparison.Ordinal);
+					var clsid = pnpObj["classGuid"];
+
+					if (clsid != null && ((string)clsid).Equals("{4d36e978-e325-11ce-bfc1-08002be10318}", StringComparison.OrdinalIgnoreCase))
+					{
+						string deviceId = pnpObj["deviceid"].ToString();
+
+						string pid = null;
+						int pidIndex = deviceId.IndexOf("PID_");
+						if (pidIndex > -1)
+						{
+							string startingAtPid = deviceId.Substring(pidIndex);
+							pid = startingAtPid.Substring(4, 4); // pid is four characters long
+						}
+						if (pid != "1001")
+						{
+							continue;
+						}
+						var nameProp = pnpObj["name"];
+						var name = nameProp.ToString();
+						var idx = name.IndexOf('(');
+						if (idx > -1)
+						{
+							var lidx = name.IndexOf(')', idx + 2);
+							if (lidx > -1)
+							{
+								name = name.Substring(idx + 1, lidx - idx - 1);
+							}
+						}
+						if (portName.Equals(name, StringComparison.OrdinalIgnoreCase))
+						{
+							return EspSerialType.UsbSerialJtag;
+						}
+
+					}
 				}
-				return cmp;
-			});
-			return result;
+
+				return EspSerialType.Standard;
+			}
+			catch
+			{
+				return EspSerialType.Autodetect;
+			}
 		}
 	}
 }

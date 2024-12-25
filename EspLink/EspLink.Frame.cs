@@ -53,18 +53,30 @@ namespace EL
 			try
 			{
 				cancellationToken.ThrowIfCancellationRequested();
-				port.WriteTimeout = timeout;
-				await port.BaseStream.WriteAsync(toWrite, 0, toWrite.Length);
-				cancellationToken.ThrowIfCancellationRequested();
-				await port.BaseStream.FlushAsync();
+				if (_isWindows)
+				{
+					// TODO: Showstopper. On Linux this hangs on Serial JTAG due to https://github.com/dotnet/runtime/issues/2037
+					port.WriteTimeout = timeout;
+					await port.BaseStream.WriteAsync(toWrite, 0, toWrite.Length);
+					cancellationToken.ThrowIfCancellationRequested();
+					await port.BaseStream.FlushAsync();
+				} else
+				{
+					// Write timeout does not work with async on linux over serial jtag
+					
+					port.WriteTimeout = timeout;
+					port.Write(toWrite, 0, toWrite.Length);
+					cancellationToken.ThrowIfCancellationRequested();
+				}
 			}
 			finally
 			{
 				port.WriteTimeout = -1;
+				
 			}
 		}
 		
-		byte[] ReadFrame(CancellationToken cancellationToken, int timeout=-1)
+		async Task<byte[]> ReadFrameAsync(CancellationToken cancellationToken, int timeout=-1)
 		{
 			var bytes = new List<byte>();
 			var time = 0;
@@ -76,7 +88,7 @@ namespace EL
 				var i = ReadByteNoBlock();
 				if (0 > i)
 				{
-					Thread.Sleep(10);
+					await Task.Delay(10);
 					time += 10;
 					if (timeout > -1 && time >= timeout)
 					{

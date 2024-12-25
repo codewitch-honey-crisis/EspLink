@@ -9,35 +9,10 @@ using System.Threading.Tasks;
 
 namespace EL
 {
-	/*
-def get_alignment_offset_for_type(ptype):
-    return ALIGNMENT.get(ptype, ALIGNMENT[DATA_TYPE])
-
-
-def get_alignment_size_for_type(ptype):
-    if ptype == APP_TYPE:
-        if secure == SECURE_V1:
-            # For secure boot v1 case, app partition must be 64K aligned
-            # signature block (68 bytes) lies at the very end of 64K block
-            return 0x10000
-        elif secure == SECURE_V2:
-            # For secure boot v2 case, app partition must be 4K aligned
-            # signature block (4K) is kept after padding the unsigned image to 64K boundary
-            return 0x1000
-        else:
-            # For no secure boot enabled case, app partition must be 4K aligned (min. flash erase size)
-            return 0x1000
-    # No specific size alignement requirement as such
-    return 0x1
-
-	 */
 	partial class EspLink
 	{
 		
-		static readonly byte[] _md5PartMagic = new byte[]
-			{
-				0xEB,0xEB,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
-			};
+		static readonly byte[] _md5PartMagic = new byte[] { 0xEB,0xEB,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
 		private enum PartitionType : byte
 		{
 			App = 0x00,
@@ -209,12 +184,6 @@ def get_alignment_size_for_type(ptype):
 			}
 			await output.FlushAsync();
 			output.Position = 0;
-			using(var file = File.OpenWrite(@"partitions_test.bin"))
-			{
-				await output.CopyToAsync(file);
-				output.Position = 0;
-			}
-
 		}
 		static uint ParsePartType(string type)
 		{
@@ -241,7 +210,7 @@ def get_alignment_size_for_type(ptype):
 				var fa = flags.Split(':');
 				for (var i = 0; i < fa.Length; ++i)
 				{
-					var f = fa[i];
+					var f = fa[i].Trim();
 					if (f.Length == 0) { continue; }
 					switch(f)
 					{

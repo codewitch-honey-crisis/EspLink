@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,7 +36,7 @@ namespace EL
 	partial class EspLink
 	{
 		static readonly byte[] _syncPacket = new byte[] { 0x07, 0x07, 0x12, 0x20, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
-		static readonly Regex _bootloaderRegex = new Regex(@"boot:0x([0-9a-fA-F]+)(.*waiting for download)?", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+		static readonly Regex _bootloaderRegex = new Regex(@"boot:0x([0-9a-fA-F]+)(.*waiting for download)?", RegexOptions.CultureInvariant);
 		bool _inBootloader = false;
 		void CheckReady(bool checkConnected = true)
 		{
@@ -86,35 +87,13 @@ namespace EL
 				Delay = delay;
 			}
 		}
-		/// <summary>
-		/// True if the port is a USB serial JTAG connection, otherwise false
-		/// </summary>
-		public bool IsUsbSerialJtag
-		{
-			get
-			{
-				return FindComPort(_portName).Pid.Equals("PID_1001",StringComparison.OrdinalIgnoreCase);
-			}
-		}
+		
 		StrategyEntry[] BuildConnectStrategy(EspConnectMode connectMode,int defaultResetDelay=50,int extraDelay=550)
 		{
 			// Serial JTAG USB
 			if(connectMode==EspConnectMode.UsbReset || IsUsbSerialJtag)
 			{
 				return new StrategyEntry[] { new StrategyEntry(SerialJtagResetStrategy) };
-			}
-			var iswin = (Environment.OSVersion.Platform == PlatformID.Win32NT || Environment.OSVersion.Platform == PlatformID.Win32Windows || Environment.OSVersion.Platform == PlatformID.Win32S);
-			// USB-to-Serial bridge
-			if (!iswin && !_portName.StartsWith("rfc2217:",StringComparison.Ordinal))
-			{
-				/*return (
-					UnixTightReset(self._port, delay),
-					UnixTightReset(self._port, extra_delay),
-					ClassicReset(self._port, delay),
-					ClassicReset(self._port, extra_delay),
-
-				)*/
-				throw new NotImplementedException("Unix reset is not implemented");
 			}
 			return new StrategyEntry[] { new StrategyEntry(ClassicResetStrategy, defaultResetDelay), new StrategyEntry(ClassicResetStrategy, extraDelay) };
 
@@ -129,17 +108,16 @@ namespace EL
 			var bootLogDetected = false;
 			var downloadMode = false;
 			ushort bootMode = 0;
-			var port = GetOrOpenPort();
+			var port = GetOrOpenPort(true);
 			progress?.Report(prog++);
 
 			if (mode != EspConnectMode.NoReset)
 			{
-				port.DiscardInBuffer();
-				strategy.ResetStrategy?.Invoke(port);
+				DiscardInput();
+				strategy.ResetStrategy?.Invoke(port,cancellationToken);
 				progress?.Report(prog++);
 
-				var str = port.ReadExisting();
-
+				var str = Encoding.ASCII.GetString(await ReadExistingInputAsync());
 				var match = _bootloaderRegex.Match(str);
 				if (match.Success && ushort.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture.NumberFormat, out bootMode))
 				{
@@ -157,8 +135,7 @@ namespace EL
 				progress?.Report(prog++);
 				try
 				{
-					port.DiscardInBuffer();
-					await port.BaseStream.FlushAsync();
+					DiscardInput();
 					await SyncAsync(timeout, cancellationToken, progress, prog);
 					return;
 				}
@@ -234,7 +211,7 @@ namespace EL
 			{
 				throw lastErr;
 			}
-			GetOrOpenPort().DiscardInBuffer();
+			DiscardInput();//GetOrOpenPort().DiscardInBuffer();
 			if (!detecting)
 			{
 				var magic = await ReadRegAsync(0x40001000, cancellationToken, timeout);
