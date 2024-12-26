@@ -317,6 +317,21 @@ namespace EL
 							{
 							}
 						}
+						try
+						{
+							var file = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "esplink.zip");
+							if (System.IO.File.Exists(file))
+							{
+								System.IO.File.Delete(file);
+							}
+						}
+						catch
+						{
+						}
+						foreach (var file in Directory.GetFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "esplink.zip"))
+						{
+
+						}
 						Console.WriteLine("Application updated");
 					}
 					catch
