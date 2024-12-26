@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,10 +14,11 @@ namespace EL
 		string _portName;
 		SerialPort _port;
 		int _baudRate = 115200;
-		readonly object _lock = new object();
+		readonly object _serialReadLock = new object();
 		Queue<byte> _serialIncoming = new Queue<byte>();	
 		Handshake _serialHandshake;
 		bool _isUsbSerialJTag = false;
+		static readonly Lazy<Regex> _udveadmScrape = new Lazy<Regex>(() => new Regex("ID_MODEL=([0-9_A-Fa-f]+)", RegexOptions.CultureInvariant));
 		/// <summary>
 		/// The serial handshake protocol(s) to use
 		/// </summary>
@@ -71,7 +73,7 @@ namespace EL
 			{
 				port.DiscardInBuffer();
 			}
-			lock (_lock)
+			lock (_serialReadLock)
 			{
 				_serialIncoming.Clear();
 			}
@@ -84,7 +86,7 @@ namespace EL
 				await Task.Delay(10);
 			}
 			byte[] result;
-			lock (_lock)
+			lock (_serialReadLock)
 			{
 				result = new byte[_serialIncoming.Count];
 				_serialIncoming.CopyTo(result, 0);
@@ -99,7 +101,7 @@ namespace EL
 
 		int ReadByteNoBlock()
 		{
-			lock(_lock)
+			lock(_serialReadLock)
 			{
 				if(_serialIncoming.Count>0)
 				{
@@ -114,7 +116,7 @@ namespace EL
 			{
 				int len = _port.BytesToRead;
 				int i = -1;
-				lock (_lock)
+				lock (_serialReadLock)
 				{
 					try
 					{
@@ -156,7 +158,7 @@ namespace EL
 			{
 				_port.BaudRate = newBaud;
 				await Task.Delay(50); // ignore crap.
-				DiscardInput();//_port.DiscardInBuffer();
+				DiscardInput();
 			}
 		}
 		/// <summary>
@@ -195,16 +197,55 @@ namespace EL
 			}
 			Cleanup();
 		}
+		class PortComparer : IComparer<string>
+		{
+			static readonly char[] _digits = new char[] {'0','1','2','3','4','5','6','7','8','9'};
+			private static int NumForPort(string port, out int numIndex)
+			{
+				numIndex = -1;
+				int idx = port.LastIndexOfAny(_digits);
+				if (idx == port.Length - 1)
+				{
+					while (Array.IndexOf(_digits, port[idx]) > -1 && idx >= 0) --idx;
+					++idx;
+					var num = port.Substring(idx);
+					if (int.TryParse(num, NumberStyles.Integer, CultureInfo.InvariantCulture.NumberFormat, out int result)) { numIndex = idx; return result; }
+				}
+				return -1;
+			}
+			public int Compare(string x, string y)
+			{
+				var xn = NumForPort(x, out int idx);
+				if (xn > -1)
+				{
+					var xs = x.Substring(0, idx);
+					var yn = NumForPort(y, out idx);
+					if (yn > -1)
+					{
+						var ys = y.Substring(0, idx);
+						var cmp = string.Compare(xs, ys, StringComparison.InvariantCulture);
+						if (cmp == 0)
+						{
+							return xn.CompareTo(yn);
+						}
+					}
+				}
+				return string.Compare(x, y, StringComparison.InvariantCulture);
+			}
+			public static readonly PortComparer Default = new PortComparer();
+		}
 		/// <summary>
 		/// Retrieves a list of the COM ports
 		/// </summary>
 		/// <returns>A read-only list of tuples indicating the name, id, long name, VID, PID, and description of the port</returns>
 		public static string[] GetPorts()
 		{
-			return SerialPort.GetPortNames();
+			var names = SerialPort.GetPortNames();
+			Array.Sort(names, PortComparer.Default);
+			return names;
 		}
 
-		static readonly Regex _udveadmScrape = new Regex("ID_MODEL=([0-9_A-Fa-f]+)", RegexOptions.CultureInvariant);
+		
 		static EspSerialType AutodetectSerialTypeUnix(string portName)
 		{
 			try
@@ -221,7 +262,7 @@ namespace EL
 				{
 					proc.WaitForExit();
 					var output = proc.StandardOutput.ReadToEnd();
-					var match = _udveadmScrape.Match(output);
+					var match = _udveadmScrape.Value.Match(output);
 					if (match.Success && match.Groups.Count > 1)
 					{
 						if (match.Groups[1].Value == "1001")
@@ -240,7 +281,6 @@ namespace EL
 		{
 			try
 			{
-				var result = new List<(string Name, string Id, string LongName, string Vid, string Pid, string Description)>();
 				var mgmtType = Type.GetType("System.Management.ManagementClass, System.Management, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", true);
 				dynamic pnpCls = Activator.CreateInstance(mgmtType, new object[] { "Win32_PnPEntity" });
 

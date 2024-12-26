@@ -2,10 +2,22 @@
 
 namespace EL
 {
+	/// <summary>
+	/// The type of serial connection
+	/// </summary>
 	public enum EspSerialType
 	{
+		/// <summary>
+		/// Autodetect the serial type
+		/// </summary>
 		Autodetect = 0,
+		/// <summary>
+		/// Standard serial or serial over USB
+		/// </summary>
 		Standard = 1,
+		/// <summary>
+		/// USB Serial JTAG (ESP32-S3)
+		/// </summary>
 		UsbSerialJtag = 2,
 	}
 	/// <summary>
@@ -18,6 +30,7 @@ namespace EL
 		/// Construct a new instance on the given COM port
 		/// </summary>
 		/// <param name="portName">The COM port name</param>
+		/// <param name="serialType">The type of serial connection</param>
 		public EspLink(string portName, EspSerialType serialType = EspSerialType.Autodetect)
 		{
 			_portName = portName;

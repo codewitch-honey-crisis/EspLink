@@ -25,6 +25,9 @@ namespace EL
 				DataStart = dataStart;
 			}
 		}
+		/// <summary>
+		/// Indicates whether or not the software stub is running
+		/// </summary>
 		public bool IsStub { get; private set; }
 
 		async Task<EspStub> GetStubAsync()

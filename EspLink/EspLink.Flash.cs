@@ -199,7 +199,7 @@ namespace EL
 			uint a = 1, b = 0;
 
 			int currentByte;
-			while ((currentByte = stream.ReadByte()) != -1)
+			while ((currentByte = stream.ReadByte()) > -1)
 			{
 				a = (a + (uint)currentByte) % MOD_ADLER;
 				b = (b + a) % MOD_ADLER;

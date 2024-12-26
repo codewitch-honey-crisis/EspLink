@@ -22,7 +22,7 @@ namespace EL
 			PackUInts(data, 0, new uint[] { address, value, mask, delayUSec });
 			if (delayAfterUSec != 0)
 			{
-				PackUInts(data, 16, new uint[] { 0x60000078, 0, 0, delayAfterUSec });
+				PackUInts(data, 16, new uint[] { Device.UART_DATE_REG_ADDR, 0, 0, delayAfterUSec });
 			}
 			return await CheckCommandAsync("write target memory", Device != null ? Device.ESP_WRITE_REG : 0x09, data, 0, cancellationToken, timeout);
 		}

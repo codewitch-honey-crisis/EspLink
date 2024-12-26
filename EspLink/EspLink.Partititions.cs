@@ -51,12 +51,12 @@ namespace EL
 			public readonly PartitionEntryFlags Flags;
 			public PartitionEntry(string name,uint type, uint subType, uint offset, uint length, PartitionEntryFlags flags)
 			{
-				this.Name = name;
-				this.Type = type;
-				this.SubType = subType;
-				this.Offset = offset;
-				this.Length = length;
-				this.Flags = flags;
+				Name = name;
+				Type = type;
+				SubType = subType;
+				Offset = offset;
+				Length = length;
+				Flags = flags;
 			}
 			public static readonly PartitionEntry Empty = new PartitionEntry(null, (uint)PartitionType.App, (uint)PartitionSubType.Ota, 0, 0,PartitionEntryFlags.None);
 		}
@@ -298,9 +298,8 @@ namespace EL
 				size = SwapBytes(size);
 				flags = SwapBytes(flags);
 			}
-			ba = BitConverter.GetBytes(offset);
-			await stream.WriteAsync(ba, 0, ba.Length);
-			ba = BitConverter.GetBytes(size);
+			ba = new byte[8];
+			PackUInts(ba, 0, new uint[] { offset,size});
 			await stream.WriteAsync(ba, 0, ba.Length);
 			ba = new byte[16];
 			Encoding.ASCII.GetBytes(entry.Name, 0, Math.Min(16, entry.Name.Length), ba, 0);
@@ -308,10 +307,31 @@ namespace EL
 			ba = BitConverter.GetBytes(flags);
 			await stream.WriteAsync(ba, 0, ba.Length);
 		}
+		/// <summary>
+		/// Flashes a partition table to the device
+		/// </summary>
+		/// <param name="partitionTable">A CSV file following this form: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/partition-tables.html</param>
+		/// <param name="blockSize">The size of the flash blocks to use</param>
+		/// <param name="offset">The offset to begin writing at</param>
+		/// <param name="writeAttempts">The number of write attempts to make per block</param>
+		/// <param name="finalize">Finalize the flash write and exit the bootloader (not necessary)</param>
+		/// <param name="timeout">The timeout for the suboperations</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> that can be used to report the progress</param>
 		public void FlashPartition(TextReader partitionTable, uint blockSize = 0, uint offset = 0x08000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
 		{
 			FlashPartitionAsync(CancellationToken.None, partitionTable, blockSize, offset, writeAttempts, finalize, timeout, progress).Wait();
 		}
+		/// <summary>
+		/// Asynchronously flashes a partition table to the device
+		/// </summary>
+		/// <param name="cancellationToken">A token that can be used to cancel this operation</param>
+		/// <param name="partitionTable">A CSV file following this form: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/partition-tables.html</param>
+		/// <param name="blockSize">The size of the flash blocks to use</param>
+		/// <param name="offset">The offset to begin writing at</param>
+		/// <param name="writeAttempts">The number of write attempts to make per block</param>
+		/// <param name="finalize">Finalize the flash write and exit the bootloader (not necessary)</param>
+		/// <param name="timeout">The timeout for the suboperations</param>
+		/// <param name="progress">A <see cref="IProgress{Int32}"/> that can be used to report the progress</param>
 		public async Task FlashPartitionAsync(CancellationToken cancellationToken, TextReader partitionTable, uint blockSize = 0, uint offset = 0x08000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
 		{
 			using (var stm = new MemoryStream())

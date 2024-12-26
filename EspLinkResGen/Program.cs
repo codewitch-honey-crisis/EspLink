@@ -24,7 +24,16 @@ namespace EspLinkResGen
 				using (var reader = new StreamReader(file))
 				{
 					JsonObject o = (JsonObject)JsonObject.Parse(reader);
-					using (var output = File.OpenWrite(Path.Combine(outpath, Path.GetFileNameWithoutExtension(file) + ".idx")))
+					var fname = Path.Combine(outpath, Path.GetFileNameWithoutExtension(file) + ".idx");
+					try
+					{
+						if (File.Exists(fname))
+						{
+							File.Delete(fname);
+						}
+					}
+					catch { }
+					using (var output = File.OpenWrite(fname))
 					{
 						uint entryPoint = (uint)(double)o["entry"];
 						uint textStart = (uint)(double)o["text_start"];
@@ -43,12 +52,30 @@ namespace EspLinkResGen
 						output.Write(ba, 0, ba.Length);
 					}
 					var text = Convert.FromBase64String((string)o["text"]);
-					using (var output = File.OpenWrite(Path.Combine(outpath, Path.GetFileNameWithoutExtension(file) + ".text")))
+					fname = Path.Combine(outpath, Path.GetFileNameWithoutExtension(file) + ".text");
+					try
+					{
+						if (File.Exists(fname))
+						{
+							File.Delete(fname);
+						}
+					}
+					catch { }
+					using (var output = File.OpenWrite(fname))
 					{
 						output.Write(text,0,text.Length);
 					}
 					var data = Convert.FromBase64String((string)o["data"]);
-					using (var output = File.OpenWrite(Path.Combine(outpath, Path.GetFileNameWithoutExtension(file) + ".data")))
+					fname = Path.Combine(outpath, Path.GetFileNameWithoutExtension(file) + ".data");
+					try
+					{
+						if (File.Exists(fname))
+						{
+							File.Delete(fname);
+						}
+					}
+					catch { }
+					using (var output = File.OpenWrite(fname))
 					{
 						output.Write(data, 0, data.Length);
 					}

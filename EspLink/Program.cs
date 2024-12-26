@@ -402,7 +402,8 @@ namespace EL
 
 					if (Assembly.GetExecutingAssembly().GetName().Version < latest)
 					{
-						Console.WriteLine("An update is available. Run with /update to update the utility.");
+						var sp = CliUtility.IsWindows ? "/" : "--";
+						Console.WriteLine($"An update is available. Run with {sp}update to update the utility.");
 						Console.WriteLine();
 					}
 					var cts = new CancellationTokenSource();

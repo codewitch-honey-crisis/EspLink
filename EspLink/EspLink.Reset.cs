@@ -11,6 +11,7 @@ namespace EL
 		/// A reset strategy
 		/// </summary>
 		/// <param name="port">The target serial port</param>
+		/// <param name="cancellationToken">The token that can be used to cancel the request</param>
 		/// <returns>True if the reset was successful, otherwise false</returns>
 		public delegate Task<bool> ResetStrategy(SerialPort port,CancellationToken cancellationToken);
 		/// <summary>
@@ -116,7 +117,7 @@ namespace EL
 		/// <summary>
 		/// Terminates any connection and asynchronously reset the device.
 		/// </summary>
-		/// <param name="cancellationToken">The <see cref="CancellationToken"> that can be used to cancel the operation</param>
+		/// <param name="cancellationToken">The <see cref="CancellationToken"/> that can be used to cancel the operation</param>
 		/// <param name="strategy">The reset strategy to use, or null to hard reset</param>
 		/// <exception cref="IOException">Unable to communicate with the device</exception>
 		public async Task ResetAsync(CancellationToken cancellationToken,ResetStrategy strategy = null)

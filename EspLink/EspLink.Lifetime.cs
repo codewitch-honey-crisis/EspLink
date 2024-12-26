@@ -14,6 +14,9 @@ namespace EL
 			Close();
 			GC.SuppressFinalize(this);
 		}
+		/// <summary>
+		/// Destroys this instance
+		/// </summary>
 		~EspLink()
 		{
 			Close();

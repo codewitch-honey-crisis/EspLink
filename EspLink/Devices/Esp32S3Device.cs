@@ -9,7 +9,7 @@ namespace EL
 	internal class Esp32S3Device : EspDevice
 	{
 
-		public override int FlashSize
+		internal override int FlashSize
 		{
 			get
 			{
@@ -23,7 +23,7 @@ namespace EL
 				return -1;
 			}
 		}
-		public override uint FLASH_ID
+		internal override uint FLASH_ID
 		{
 			get
 			{
@@ -33,90 +33,90 @@ namespace EL
 			}
 		}
 		public Esp32S3Device(EspLink parent) : base(parent) { }
-		public override uint IROM_MAP_START { get; } = 0x42000000;
-		public override uint IROM_MAP_END { get; } = 0x44000000;
+		internal override uint IROM_MAP_START { get; } = 0x42000000;
+		internal override uint IROM_MAP_END { get; } = 0x44000000;
 
-		public virtual uint DROM_MAP_START { get; } = 0x3C000000;
-		public virtual uint DROM_MAP_END { get; } = 0x3E000000;
+		internal virtual uint DROM_MAP_START { get; } = 0x3C000000;
+		internal virtual uint DROM_MAP_END { get; } = 0x3E000000;
 
 		// ESP32 uses a 4 byte status reply
-		public override ushort STATUS_BYTES_LENGTH { get { return Parent.IsStub ? (ushort)2 : (ushort)4; } }
+		internal override ushort STATUS_BYTES_LENGTH { get { return Parent.IsStub ? (ushort)2 : (ushort)4; } }
 
-		public override uint SPI_REG_BASE { get; } = 0x60002000;
-		public override byte SPI_USR_OFFS { get; } = 0x18;
-		public override byte SPI_USR1_OFFS { get; } = 0x1C;
-		public override byte SPI_USR2_OFFS { get; } = 0x20;
-		public override short SPI_MOSI_DLEN_OFFS { get; } = 0x24;
-		public override short SPI_MISO_DLEN_OFFS { get; } = 0x28;
+		internal override uint SPI_REG_BASE { get; } = 0x60002000;
+		internal override byte SPI_USR_OFFS { get; } = 0x18;
+		internal override byte SPI_USR1_OFFS { get; } = 0x1C;
+		internal override byte SPI_USR2_OFFS { get; } = 0x20;
+		internal override short SPI_MOSI_DLEN_OFFS { get; } = 0x24;
+		internal override short SPI_MISO_DLEN_OFFS { get; } = 0x28;
 
-		public override byte SPI_W0_OFFS { get; } = 0x58;
+		internal override byte SPI_W0_OFFS { get; } = 0x58;
 
-		public override uint EFUSE_RD_REG_BASE { get; } = 0x60007000+0x44;
+		internal override uint EFUSE_RD_REG_BASE { get; } = 0x60007000+0x44;
 
-		public override uint EFUSE_BLK0_RDATA3_REG_OFFS { get => EFUSE_RD_REG_BASE + 0x00C; }
-		public override uint EFUSE_BLK0_RDATA5_REG_OFFS { get => EFUSE_RD_REG_BASE + 0x014; }
-		public virtual uint EFUSE_DIS_DOWNLOAD_MANUAL_ENCRYPT_REG { get => EFUSE_RD_REG_BASE + 0x18; }
+		internal override uint EFUSE_BLK0_RDATA3_REG_OFFS { get => EFUSE_RD_REG_BASE + 0x00C; }
+		internal override uint EFUSE_BLK0_RDATA5_REG_OFFS { get => EFUSE_RD_REG_BASE + 0x014; }
+		internal virtual uint EFUSE_DIS_DOWNLOAD_MANUAL_ENCRYPT_REG { get => EFUSE_RD_REG_BASE + 0x18; }
 
-		public virtual byte EFUSE_DIS_DOWNLOAD_MANUAL_ENCRYPT { get; } = 1 << 7; // EFUSE_RD_DISABLE_DL_ENCRYPT
+		internal virtual byte EFUSE_DIS_DOWNLOAD_MANUAL_ENCRYPT { get; } = 1 << 7; // EFUSE_RD_DISABLE_DL_ENCRYPT
 
-		public virtual uint EFUSE_SPI_BOOT_CRYPT_CNT_REG { get => EFUSE_RD_REG_BASE; } // EFUSE_BLK0_WDATA0_REG
+		internal virtual uint EFUSE_SPI_BOOT_CRYPT_CNT_REG { get => EFUSE_RD_REG_BASE; } // EFUSE_BLK0_WDATA0_REG
 
-		public virtual uint EFUSE_SPI_BOOT_CRYPT_CNT_MASK { get; } = 0x7F << 20;  // EFUSE_FLASH_CRYPT_CNT
-		public virtual uint EFUSE_RD_ABS_DONE_REG { get => EFUSE_RD_REG_BASE + 0x018; }
+		internal virtual uint EFUSE_SPI_BOOT_CRYPT_CNT_MASK { get; } = 0x7F << 20;  // EFUSE_FLASH_CRYPT_CNT
+		internal virtual uint EFUSE_RD_ABS_DONE_REG { get => EFUSE_RD_REG_BASE + 0x018; }
 
-		public virtual byte EFUSE_RD_ABS_DONE_0_MASK { get; } = 1 << 4;
-		public virtual byte EFUSE_RD_ABS_DONE_1_MASK { get; } = 1 << 5;
+		internal virtual byte EFUSE_RD_ABS_DONE_0_MASK { get; } = 1 << 4;
+		internal virtual byte EFUSE_RD_ABS_DONE_1_MASK { get; } = 1 << 5;
 
-		public virtual uint EFUSE_VDD_SPI_REG { get => EFUSE_RD_REG_BASE + 0x10; }
+		internal virtual uint EFUSE_VDD_SPI_REG { get => EFUSE_RD_REG_BASE + 0x10; }
 
-		public virtual uint VDD_SPI_XPD { get; } = (uint)(1 << 14);  // XPD_SDIO_REG
-
-
-		public virtual uint VDD_SPI_TIEH { get; } = (uint)(1 << 15);  // XPD_SDIO_TIEH
-
-		public virtual uint VDD_SPI_FORCE { get; } = (uint)(1 << 16); // XPD_SDIO_FORCE
+		internal virtual uint VDD_SPI_XPD { get; } = (uint)(1 << 14);  // XPD_SDIO_REG
 
 
-		public virtual uint DR_REG_SYSCON_BASE { get; } = 0x3FF66000;
+		internal virtual uint VDD_SPI_TIEH { get; } = (uint)(1 << 15);  // XPD_SDIO_TIEH
 
-		public virtual uint APB_CTL_DATE_ADDR { get => DR_REG_SYSCON_BASE + 0x7C; }
+		internal virtual uint VDD_SPI_FORCE { get; } = (uint)(1 << 16); // XPD_SDIO_FORCE
 
-		public virtual byte APB_CTL_DATE_V { get; } = 0x1;
-		public virtual byte APB_CTL_DATE_S { get; } = 31;
-		public virtual uint UART_CLKDIV_REG { get; } = 0x3FF40014;
 
-		public virtual uint XTAL_CLK_DIVIDER { get; } = 1;
+		internal virtual uint DR_REG_SYSCON_BASE { get; } = 0x3FF66000;
 
-		public virtual uint RTCCALICFG1 { get; } = 0x3FF5F06C;
-		public virtual uint TIMERS_RTC_CALI_VALUE { get; } = 0x01FFFFFF;
-		public virtual uint TIMERS_RTC_CALI_VALUE_S { get; } = 7;
+		internal virtual uint APB_CTL_DATE_ADDR { get => DR_REG_SYSCON_BASE + 0x7C; }
 
-		public virtual uint GPIO_STRAP_REG { get; } = 0x3FF44038;
-		public virtual uint GPIO_STRAP_VDDSPI_MASK { get; } = 1 << 5;  // GPIO_STRAP_VDDSDIO
+		internal virtual byte APB_CTL_DATE_V { get; } = 0x1;
+		internal virtual byte APB_CTL_DATE_S { get; } = 31;
+		internal virtual uint UART_CLKDIV_REG { get; } = 0x3FF40014;
 
-		public virtual uint RTC_CNTL_SDIO_CONF_REG { get; } = 0x3FF48074;
-		public virtual uint RTC_CNTL_XPD_SDIO_REG { get; } = (uint)(1L << 31);
-		public virtual uint RTC_CNTL_DREFH_SDIO_M { get; } = (uint)(3L << 29);
-		public virtual uint RTC_CNTL_DREFM_SDIO_M { get; } = (uint)(3L << 27);
-		public virtual uint RTC_CNTL_DREFL_SDIO_M { get; } = (uint)(3L << 25);
-		public virtual uint RTC_CNTL_SDIO_FORCE { get; } = (uint)(1L << 22);
-		public virtual uint RTC_CNTL_SDIO_PD_EN { get; } = (uint)(1L << 21);
+		internal virtual uint XTAL_CLK_DIVIDER { get; } = 1;
 
-		public virtual uint UARTDEV_BUF_NO_USB_OTG { get; } = 3;
-		public virtual uint UARTDEV_BUF_NO_USB_JTAG_SERIAL { get; } = 4;
+		internal virtual uint RTCCALICFG1 { get; } = 0x3FF5F06C;
+		internal virtual uint TIMERS_RTC_CALI_VALUE { get; } = 0x01FFFFFF;
+		internal virtual uint TIMERS_RTC_CALI_VALUE_S { get; } = 7;
+
+		internal virtual uint GPIO_STRAP_REG { get; } = 0x3FF44038;
+		internal virtual uint GPIO_STRAP_VDDSPI_MASK { get; } = 1 << 5;  // GPIO_STRAP_VDDSDIO
+
+		internal virtual uint RTC_CNTL_SDIO_CONF_REG { get; } = 0x3FF48074;
+		internal virtual uint RTC_CNTL_XPD_SDIO_REG { get; } = (uint)(1L << 31);
+		internal virtual uint RTC_CNTL_DREFH_SDIO_M { get; } = (uint)(3L << 29);
+		internal virtual uint RTC_CNTL_DREFM_SDIO_M { get; } = (uint)(3L << 27);
+		internal virtual uint RTC_CNTL_DREFL_SDIO_M { get; } = (uint)(3L << 25);
+		internal virtual uint RTC_CNTL_SDIO_FORCE { get; } = (uint)(1L << 22);
+		internal virtual uint RTC_CNTL_SDIO_PD_EN { get; } = (uint)(1L << 21);
+
+		internal virtual uint UARTDEV_BUF_NO_USB_OTG { get; } = 3;
+		internal virtual uint UARTDEV_BUF_NO_USB_JTAG_SERIAL { get; } = 4;
 		
-		public virtual uint UARTDEV_BUF_NO { get; } = 0x3FCEF14C;
+		internal virtual uint UARTDEV_BUF_NO { get; } = 0x3FCEF14C;
 
-		public virtual uint RTCCNTL_BASE_REG { get; } = 0x60008000;
-		public virtual uint RTC_CNTL_SWD_CONF_REG { get { return RTCCNTL_BASE_REG + 0x00B4; } }
-		public virtual uint RTC_CNTL_SWD_AUTO_FEED_EN { get; } = (uint)(1L << 31);
-		public virtual uint RTC_CNTL_SWD_WPROTECT_REG { get { return RTCCNTL_BASE_REG + 0x00B8; } }
-		public virtual uint RTC_CNTL_SWD_WKEY { get; } = 0x8F1D312A;
+		internal virtual uint RTCCNTL_BASE_REG { get; } = 0x60008000;
+		internal virtual uint RTC_CNTL_SWD_CONF_REG { get { return RTCCNTL_BASE_REG + 0x00B4; } }
+		internal virtual uint RTC_CNTL_SWD_AUTO_FEED_EN { get; } = (uint)(1L << 31);
+		internal virtual uint RTC_CNTL_SWD_WPROTECT_REG { get { return RTCCNTL_BASE_REG + 0x00B8; } }
+		internal virtual uint RTC_CNTL_SWD_WKEY { get; } = 0x8F1D312A;
 
-		public virtual uint RTC_CNTL_WDTCONFIG0_REG { get { return RTCCNTL_BASE_REG + 0x0098; } }
-		public virtual uint RTC_CNTL_WDTWPROTECT_REG { get { return RTCCNTL_BASE_REG + 0x00B0; } }
-		public virtual uint RTC_CNTL_WDT_WKEY { get; } = 0x50D83AA1;
-		public override uint FLASH_WRITE_SIZE { 
+		internal virtual uint RTC_CNTL_WDTCONFIG0_REG { get { return RTCCNTL_BASE_REG + 0x0098; } }
+		internal virtual uint RTC_CNTL_WDTWPROTECT_REG { get { return RTCCNTL_BASE_REG + 0x00B0; } }
+		internal virtual uint RTC_CNTL_WDT_WKEY { get; } = 0x50D83AA1;
+		internal override uint FLASH_WRITE_SIZE { 
 			get { 
 				if(Parent.IsStub)
 				{
@@ -125,8 +125,8 @@ namespace EL
 				return base.FLASH_WRITE_SIZE;
 			} 
 		}
-		public virtual uint USB_RAM_BLOCK { get; } = 0x800;  // Max block size USB-OTG is used
-		public virtual IReadOnlyDictionary<byte, int> FLASH_SIZES { get; } = new Dictionary<byte, int>() {
+		internal virtual uint USB_RAM_BLOCK { get; } = 0x800;  // Max block size USB-OTG is used
+		internal virtual IReadOnlyDictionary<byte, int> FLASH_SIZES { get; } = new Dictionary<byte, int>() {
 			{ 0x00, 1*1024 },
 			{ 0x10, 2*1024 },
 			{ 0x20, 4*1024 },
@@ -137,7 +137,7 @@ namespace EL
 			{ 0x70, 128*1024 }
 		};
 
-		public override uint BOOTLOADER_FLASH_OFFSET { get; } = 0x1000;
+		internal override uint BOOTLOADER_FLASH_OFFSET { get; } = 0x1000;
 
 
 		public virtual uint UF2_FAMILY_ID { get; } = 0x1C5F21B0;
