@@ -177,7 +177,7 @@ namespace EL
         /// <param name="cancellationToken">The cancellation token</param>
         /// <param name="timeout">The timeout</param>
         /// <returns>An awaitable task</returns>
-        public async Task ConnectAsync(CancellationToken cancellationToken, int timeout = -1)
+        internal async Task ConnectAsync(CancellationToken cancellationToken, int timeout = -1)
         {
             await OnConnectedAsync(cancellationToken, timeout);
         }

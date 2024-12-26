@@ -193,7 +193,7 @@ namespace EL
 				try
 				{
 					progress?.Report(prog++);
-					await ConnectAttemptAsync(strategy[strategyIndex], mode, cancellationToken, progress, prog, timeout);
+					await ConnectAttemptAsync(strategy[strategyIndex], mode, cancellationToken, progress, prog, timeout==-1?5000:timeout);
 					++strategyIndex;
 					if(strategyIndex == strategy.Length)
 					{

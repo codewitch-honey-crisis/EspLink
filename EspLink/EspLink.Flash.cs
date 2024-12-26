@@ -8,8 +8,114 @@ namespace EL
 {
 	partial class EspLink
     {
-        const int ERASE_REGION_TIMEOUT_PER_MB = 30;
-        async Task<uint> FlashDeflBeginAsync(CancellationToken cancellationToken, uint size, uint compsize, uint offset, uint blockSize, int timeout=-1) {
+        const int ERASE_REGION_TIMEOUT_PER_MB = 60;
+		async Task<uint> FlashBeginAsync(CancellationToken cancellationToken, uint size, uint compsize, uint offset, uint blockSize, int timeout = -1)
+		{
+			CheckReady();
+			// Start downloading compressed data to Flash (performs an erase)
+			// Returns number of blocks (size self.FLASH_WRITE_SIZE) to write.
+			if (blockSize == 0)
+			{
+				blockSize = Device.FLASH_WRITE_SIZE;
+			}
+			var num_blocks = (compsize + blockSize - 1) / blockSize;
+			var erase_size = size;
+			int timeout2 = -1;
+			if (timeout > -1)
+			{
+				if (IsStub)
+				{
+					timeout2 = DefaultTimeout;
+				}
+				else
+				{
+					timeout2 = 1000 * (int)(ERASE_REGION_TIMEOUT_PER_MB * ((float)size / 1e6));
+				}
+			}
+			uint perase_size = erase_size;
+			uint pnum_blocks = num_blocks;
+			uint pblockSize = blockSize;
+			uint poffset = offset;
+
+			if (!BitConverter.IsLittleEndian)
+			{
+				perase_size = SwapBytes(perase_size);
+				pnum_blocks = SwapBytes(pnum_blocks);
+				pblockSize = SwapBytes(pblockSize);
+				poffset = SwapBytes(poffset);
+			}
+			var data = new byte[Device.SUPPORTS_ENCRYPTED_FLASH ? 20 : 16];
+			if (Device.SUPPORTS_ENCRYPTED_FLASH)
+			{
+				PackUInts(data, 0, new uint[] { perase_size, pnum_blocks, pblockSize, poffset, 0 });
+			}
+			else
+			{
+				PackUInts(data, 0, new uint[] { perase_size, pnum_blocks, pblockSize, poffset });
+			}
+
+			await CheckCommandAsync("enter flash download mode",
+			Device.ESP_FLASH_BEGIN,
+			data,
+			0,
+			cancellationToken,
+			timeout2);
+			return num_blocks;
+		}
+		async Task FlashFinishAsync(CancellationToken cancellationToken, bool reboot = false, int timeout = -1)
+		{
+			// not sure this even should be used
+			CheckReady();
+			// Leave compressed flash mode and run/reboot
+
+			if (!reboot && !IsStub)
+			{
+				// skip sending flash_finish to ROM loader, as this
+				// exits the bootloader. Stub doesn't do this.
+				return;
+			}
+			uint not_reboot = !reboot ? (uint)1 : 0;
+			if (!BitConverter.IsLittleEndian)
+			{
+				SwapBytes(not_reboot);
+			}
+			var data = BitConverter.GetBytes(not_reboot);
+			await CheckCommandAsync("leave compressed flash mode", Device.ESP_FLASH_END, data, 0, cancellationToken, timeout);
+			_inBootloader = false;
+		}
+		async Task FlashBlockAsync(CancellationToken cancellationToken, byte[] data, uint seq, int attempts = 3, int timeout = -1)
+		{
+			// """Write block to flash, retry if fail"""
+			CheckReady();
+			if (attempts < 1) attempts = 1;
+			// Write block to flash, send compressed, retry if fail
+			Exception lastErr = null;
+			while (attempts-- > 0)
+			{
+				try
+				{
+					var pck = new byte[16 + data.Length];
+					PackUInts(pck, 0, new uint[] { (uint)data.Length, seq, 0, 0 });
+					Array.Copy(data, 0, pck, 16, data.Length);
+					await CheckCommandAsync(
+					$"write compressed data to flash after seq {seq}",
+					Device.ESP_FLASH_DATA, pck, Checksum(data, 0, data.Length), cancellationToken, timeout);
+					return;
+
+				}
+				catch (Exception e)
+				{
+					lastErr = e;
+				}
+			}
+			if (lastErr == null)
+			{
+				lastErr = new IOException("The retry count was exceeded");
+			}
+			throw lastErr;
+		}
+
+		async Task<uint> FlashDeflBeginAsync(CancellationToken cancellationToken, uint size, uint compsize, uint offset, uint blockSize, int timeout=-1) {
             CheckReady();
             // Start downloading compressed data to Flash (performs an erase)
             // Returns number of blocks (size self.FLASH_WRITE_SIZE) to write.
@@ -27,9 +133,10 @@ namespace EL
             }
 
             write_size = erase_blocks * blockSize;
-            if(timeout>-1)
+			int tm = -1;
+			if(timeout>-1)
             {
-                var tm = (int)(1000*( ERASE_REGION_TIMEOUT_PER_MB * ((float)write_size / 1e6)));
+                tm = (int)(1000*( ERASE_REGION_TIMEOUT_PER_MB * ((float)write_size / 1e6)));
                 if(tm<timeout)
                 {
                     tm = timeout;
@@ -53,7 +160,7 @@ namespace EL
             data,
             0,
             cancellationToken,
-            timeout);
+            tm);
             return num_blocks;
         }
 		async Task FlashDeflFinishAsync(CancellationToken cancellationToken, bool reboot = false, int timeout = -1)
@@ -110,41 +217,57 @@ namespace EL
 		/// Flashes a binary image to a device
 		/// </summary>
 		/// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
+		/// <param name="compress">True to compress the image and save bandwidth, otherwise false</param>
 		/// <param name="blockSize">The size of each block to write</param>
 		/// <param name="offset">The offset in the flash region where the write is to begin</param>
 		/// <param name="writeAttempts">The number of attempts to write each block before failing</param>
 		/// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
 		/// <param name="timeout">The timeout for each suboperation</param>
 		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
-		public void Flash(Stream uncompressedInput, uint blockSize = 0, uint offset =0x10000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
+		public void Flash(Stream uncompressedInput, bool compress=true,uint blockSize = 0, uint offset =0x10000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
         {
-            FlashAsync(CancellationToken.None,uncompressedInput,blockSize, offset, writeAttempts, finalize, timeout,progress).Wait();
+            FlashAsync(CancellationToken.None,uncompressedInput,compress,blockSize, offset, writeAttempts, finalize, timeout,progress).Wait();
         }
 		/// <summary>
 		/// Asynchronously flashes a binary image to a device
 		/// </summary>
 		/// <param name="cancellationToken">The cancellation token to allow for the operation to be canceled</param>
 		/// <param name="uncompressedInput">An uncompressed raw binary image to flash</param>
+		/// <param name="compress">True to compress the image and save bandwidth, otherwise false</param>
 		/// <param name="blockSize">The size of each block to write</param>
 		/// <param name="offset">The offset in the flash region where the write is to begin</param>
 		/// <param name="writeAttempts">The number of attempts to write each block before failing</param>
 		/// <param name="finalize">True to finalize the flash and exit the bootloader (not necessary)</param>
 		/// <param name="timeout">The timeout for each suboperation</param>
 		/// <param name="progress">A <see cref="IProgress{Int32}"/> implementation to report progress</param>
-		public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,uint blockSize=0, uint offset=0x10000, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
+		public async Task FlashAsync(CancellationToken cancellationToken, Stream uncompressedInput,bool compress=true, uint blockSize=0, uint offset=0x10000, int writeAttempts = 3, bool finalize=false, int timeout = -1,IProgress<int> progress = null)
         {
             CheckReady();
             if(blockSize==0)
             {
                 blockSize = Device.FLASH_WRITE_SIZE;
             }
-            var stm = new MemoryStream(uncompressedInput.Length<=int.MaxValue?(int)uncompressedInput.Length:int.MaxValue);
-            await CompressToZlibStreamAsync(uncompressedInput, stm,cancellationToken);
-            stm.Position = 0;
+			Stream stm;
+			if (compress)
+			{
+				stm = new MemoryStream(uncompressedInput.Length <= int.MaxValue ? (int)uncompressedInput.Length : int.MaxValue);
+				await CompressToZlibStreamAsync(uncompressedInput, stm, cancellationToken);
+				stm.Position = 0;
+			} else
+			{
+				stm = uncompressedInput;
+			}
             var uclen = (uint)uncompressedInput.Length;
             var cln = (uint)stm.Length;
             progress?.Report(0);
-            var blockCount =  await FlashDeflBeginAsync(cancellationToken, uclen, cln, offset,blockSize, timeout);
+			uint blockCount;
+			if (compress)
+			{
+				blockCount = await FlashDeflBeginAsync(cancellationToken, uclen, cln, offset, blockSize, timeout);
+			} else
+			{
+				blockCount = await FlashBeginAsync(cancellationToken, uclen, cln, offset, blockSize, timeout);
+			}
             var block = new byte[blockSize];
             for(int i = 0;i<blockCount;++i)
             {
@@ -155,7 +278,13 @@ namespace EL
                 {
                     block[j] = 0xFF;
                 }
-                await FlashDeflBlockAsync(cancellationToken, block, (uint)i, writeAttempts, timeout);
+				if (compress)
+				{
+					await FlashDeflBlockAsync(cancellationToken, block, (uint)i, writeAttempts, timeout);
+				} else
+				{
+					await FlashBlockAsync(cancellationToken, block, (uint)i, writeAttempts, timeout);
+				}
 				progress?.Report((int)((i*100)/blockCount));
 			}
             stm.Close();
@@ -168,8 +297,14 @@ namespace EL
             }
 			if (finalize)
             {
-                // this isn't necessary and exits the bootloader preventing further bootloader commands being issued.
-                await FlashDeflFinishAsync(cancellationToken, false, timeout);
+				// this isn't necessary and exits the bootloader preventing further bootloader commands being issued.
+				if (compress)
+				{
+					await FlashDeflFinishAsync(cancellationToken, false, timeout);
+				} else
+				{
+					await FlashFinishAsync(cancellationToken, false, timeout);
+				}
             }
 			progress?.Report(100);
 

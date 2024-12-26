@@ -38,6 +38,24 @@ namespace EL
 			return base.ConvertFrom(context, culture, value);
 		}
 	}
+	class TimeoutConverter : Int32Converter
+	{
+		public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+		{
+			if (value is string str)
+			{
+				if(str.StartsWith("-") || str.Equals("0",StringComparison.Ordinal))
+				{
+					throw new Exception("The value must be positive");
+				}
+				if(str.Equals("none",StringComparison.Ordinal))
+				{
+					return -1;
+				}
+			}
+			return base.ConvertFrom(context, culture, value);
+		}
+	}
 	class HandshakeConverter : TypeConverter
 	{
 		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
@@ -120,17 +138,20 @@ namespace EL
 		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "offset", Description = "The flash address to load the file at. Defaults to 0x10000 (or 0x8000 for partitions)")]
 		static uint offset = 0xFFFFFFFF;
 		[CmdArg(Name = "chunk", Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "kilobytes", Description = "The size of blocks to use in kilobytes. Defaults to 16")]
-		static uint chunk = 16;
+		static uint chunk = 0;
 		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
 		static int baud = 115200*8;
 		[CmdArg(Name = "type", Optional = true, ElementName = "type", ElementConverter = "EL.SerialTypeConverter", Description = "The type of serial connection: auto (default), standard, or jtag")]
 		static EspSerialType serialType = EspSerialType.Autodetect;
 		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware (default), software, both or none.")]
 		static Handshake handshake = Handshake.RequestToSend;
-		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", Description = "The timeout for I/O operations, in seconds")]
-		static int timeout = 5;
+		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", ElementConverter ="EL.TimeoutConverter", Description = "The timeout for I/O operations, in seconds or \"none\". Defaults to 5")]
+		static int timeout = 0;
 		[CmdArg(Name = "partition", Optional = true, ElementName = "partition", Description = "Flashes a partition table from a CSV or binary file")]
 		static bool partition = false;
+		[CmdArg(Name = "nocompress", Optional = true, ElementName = "nocompress", Description = "Do not use compression")]
+		static bool nocompress = false;
+
 		internal class EspProgress : IProgress<int>
 		{
 			int _old=-1;
@@ -415,7 +436,11 @@ namespace EL
 				}
 				using (var link = new EspLink(port,serialType))
 				{
-					link.DefaultTimeout = timeout > 0 ? timeout * 1000 : -1;
+					if(chunk==0)
+					{
+						chunk = 16; 
+					}
+					link.DefaultTimeout = timeout ==-1 ? -1: timeout==0?5000: timeout * 1000;
 					var latest = await TryGetLaterVersionAsync();
 
 					if (Assembly.GetExecutingAssembly().GetName().Version < latest)
@@ -446,6 +471,7 @@ namespace EL
 					await link.RunStubAsync(tok, link.DefaultTimeout, new EspProgress());
 					Console.WriteLine();
 					await Console.Out.FlushAsync();
+					
 					if (baud != 115200)
 					{
 						await link.SetBaudRateAsync(baud, tok, link.DefaultTimeout);
@@ -463,15 +489,16 @@ namespace EL
 					await Console.Out.FlushAsync();
 					using (FileStream stm = File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 					{
+						var blocksize = chunk == 0 ? link.Device.FLASH_WRITE_SIZE : chunk * 1024;
 						var iscsv = partition && input.FullName.EndsWith(".csv",StringComparison.OrdinalIgnoreCase);
 						if (iscsv)
 						{
 							TextReader reader = new StreamReader(stm);
-							await link.FlashPartitionAsync(tok, reader, chunk * 1024, offset, 3, false, link.DefaultTimeout, new EspProgress());
+							await link.FlashPartitionAsync(tok, reader, !nocompress, blocksize, offset, 3, false, link.DefaultTimeout, new EspProgress());
 						}
 						else
 						{
-							await link.FlashAsync(tok, stm, chunk * 1024, offset, 3, false, link.DefaultTimeout, new EspProgress());
+							await link.FlashAsync(tok, stm, !nocompress,blocksize, offset, 3, false, link.DefaultTimeout, new EspProgress());
 						}
 						Console.WriteLine();
 						Console.WriteLine("Hard resetting");

@@ -311,34 +311,36 @@ namespace EL
 		/// Flashes a partition table to the device
 		/// </summary>
 		/// <param name="partitionTable">A CSV file following this form: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/partition-tables.html</param>
+		/// <param name="compress">True to compress the image to save traffic, otherwise false</param>
 		/// <param name="blockSize">The size of the flash blocks to use</param>
 		/// <param name="offset">The offset to begin writing at</param>
 		/// <param name="writeAttempts">The number of write attempts to make per block</param>
 		/// <param name="finalize">Finalize the flash write and exit the bootloader (not necessary)</param>
 		/// <param name="timeout">The timeout for the suboperations</param>
 		/// <param name="progress">A <see cref="IProgress{Int32}"/> that can be used to report the progress</param>
-		public void FlashPartition(TextReader partitionTable, uint blockSize = 0, uint offset = 0x08000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
+		public void FlashPartition(TextReader partitionTable, bool compress, uint blockSize = 0, uint offset = 0x08000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
 		{
-			FlashPartitionAsync(CancellationToken.None, partitionTable, blockSize, offset, writeAttempts, finalize, timeout, progress).Wait();
+			FlashPartitionAsync(CancellationToken.None, partitionTable, compress, blockSize, offset, writeAttempts, finalize, timeout, progress).Wait();
 		}
 		/// <summary>
 		/// Asynchronously flashes a partition table to the device
 		/// </summary>
 		/// <param name="cancellationToken">A token that can be used to cancel this operation</param>
 		/// <param name="partitionTable">A CSV file following this form: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/partition-tables.html</param>
+		/// <param name="compress">True to compress the image to save traffic, otherwise false</param>
 		/// <param name="blockSize">The size of the flash blocks to use</param>
 		/// <param name="offset">The offset to begin writing at</param>
 		/// <param name="writeAttempts">The number of write attempts to make per block</param>
 		/// <param name="finalize">Finalize the flash write and exit the bootloader (not necessary)</param>
 		/// <param name="timeout">The timeout for the suboperations</param>
 		/// <param name="progress">A <see cref="IProgress{Int32}"/> that can be used to report the progress</param>
-		public async Task FlashPartitionAsync(CancellationToken cancellationToken, TextReader partitionTable, uint blockSize = 0, uint offset = 0x08000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
+		public async Task FlashPartitionAsync(CancellationToken cancellationToken, TextReader partitionTable, bool compress, uint blockSize = 0, uint offset = 0x08000, int writeAttempts = 3, bool finalize = false, int timeout = -1, IProgress<int> progress = null)
 		{
 			using (var stm = new MemoryStream())
 			{
 				await PartitionToBinaryAsync(partitionTable, stm);
 				stm.Seek(0,SeekOrigin.Begin);
-				await FlashAsync(cancellationToken, stm, blockSize, offset, writeAttempts, finalize, timeout, progress);
+				await FlashAsync(cancellationToken, stm, compress, blockSize, offset, writeAttempts, finalize, timeout, progress);
 			}
 		}
 		private static async Task<byte[]> MD5HashAsync(Stream stream)

@@ -20,7 +20,7 @@ namespace Json
 			var column = cursor.Current.Column;
 			var result = new JsonArray();
 			if (cursor.Current.SymbolId != JsonStringRunner.Array) 
-				throw new Exception("Expected an array");
+				throw new JsonException("Expected an array",position,line,column);
 			if (!cursor.MoveNext()) 
 				throw new JsonException("Unterminated array", position, line, column);
 			while (cursor.Current.SymbolId != JsonStringRunner.ArrayEnd)
