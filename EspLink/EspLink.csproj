@@ -85,6 +85,9 @@
     <EmbeddedResource Include="Stubs\esp32s3.data" />
     <EmbeddedResource Include="Stubs\esp32s3.idx" />
     <EmbeddedResource Include="Stubs\esp32s3.text" />
+    <None Include="bin\Release\core2.bin" />
+    <None Include="bin\Release\no_ota.csv" />
+    <None Include="bin\Release\s3.bin" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">

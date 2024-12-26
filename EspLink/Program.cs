@@ -394,7 +394,10 @@ namespace EL
 			}
 			try
 			{
-
+				if(!input.FullName.StartsWith("\\\\") && !File.Exists(input.FullName))
+				{
+					throw new FileNotFoundException("The input file \""+input.Name+"\" could not be found", input.FullName);
+				}
 				using (var link = new EspLink(port,serialType))
 				{
 					link.DefaultTimeout = timeout > 0 ? timeout * 1000 : -1;
@@ -472,6 +475,8 @@ namespace EL
 #if !DEBUG
 			catch (Exception ex)
 			{
+				CliUtility.PrintUsage(CliUtility.GetSwitches(null, typeof(Program)));
+				Console.WriteLine();
 				Console.Error.WriteLine("Error: "+ex.Message);
 				return 1;
 			}
