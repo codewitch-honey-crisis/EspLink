@@ -7,7 +7,7 @@ namespace EL
 {
 	partial class EspLink
 	{
-		struct EspStub
+		private struct EspStub
 		{
 			public string Name { get; }
 			public uint EntryPoint { get; }

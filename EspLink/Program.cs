@@ -434,76 +434,79 @@ namespace EL
 				{
 					throw new FileNotFoundException("The input file \""+input.Name+"\" could not be found", input.FullName);
 				}
-				using (var link = new EspLink(port,serialType))
+				using (var link = new EspLink(port, serialType))
 				{
-					if(chunk==0)
+					if (chunk == 0)
 					{
-						chunk = 16; 
+						chunk = 16;
 					}
-					link.DefaultTimeout = timeout ==-1 ? -1: timeout==0?5000: timeout * 1000;
+					link.DefaultTimeout = timeout == -1 ? -1 : timeout == 0 ? 5000 : timeout * 1000;
 					var latest = await TryGetLaterVersionAsync();
 
 					if (Assembly.GetExecutingAssembly().GetName().Version < latest)
 					{
-						var sp = CliUtility.IsWindows ? "/" : "--";
+						var sp = CliUtility.SwitchPrefix;
 						Console.WriteLine($"An update is available. Run with {sp}update to update the utility.");
 						Console.WriteLine();
 					}
-					var cts = new CancellationTokenSource();
-					Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs e) =>
+					using (var cts = new CancellationTokenSource())
 					{
-						e.Cancel = true;
-						cts.Cancel();
-					};
-					
-					var tok = cts.Token;
-					Console.WriteLine($"{CliUtility.AssemblyTitle} v{CliUtility.AssemblyVersion}");
-					Console.WriteLine();
-					await Console.Out.FlushAsync();
-					Console.Write("Connecting...");
-					await Console.Out.FlushAsync();
-					link.SerialHandshake = handshake;
-					await link.ConnectAsync(EspConnectMode.Default, 3, false, tok, link.DefaultTimeout, new EspProgress());
-					Console.WriteLine("done!");
-					await Console.Out.FlushAsync();
-					Console.WriteLine("Running stub... ");
-					await Console.Out.FlushAsync();
-					await link.RunStubAsync(tok, link.DefaultTimeout, new EspProgress());
-					Console.WriteLine();
-					await Console.Out.FlushAsync();
-					
-					if (baud != 115200)
-					{
-						await link.SetBaudRateAsync(baud, tok, link.DefaultTimeout);
-						Console.WriteLine($"Changed baud rate to {link.BaudRate}");
-					}
-					if(input.FullName.EndsWith(".csv",StringComparison.OrdinalIgnoreCase))
-					{
-						partition = true;
-					}
-					if(offset==0xFFFFFFFF)
-					{
-						offset = partition ? (uint)0x8000 : 0x10000;
-					}
-					Console.WriteLine($"Flashing to offset 0x{offset:X}... ");
-					await Console.Out.FlushAsync();
-					using (FileStream stm = File.Open(input.FullName, FileMode.Open, FileAccess.Read))
-					{
-						var blocksize = chunk == 0 ? link.Device.FLASH_WRITE_SIZE : chunk * 1024;
-						var iscsv = partition && input.FullName.EndsWith(".csv",StringComparison.OrdinalIgnoreCase);
-						if (iscsv)
+
+						Console.CancelKeyPress += (object sender, ConsoleCancelEventArgs e) =>
 						{
-							TextReader reader = new StreamReader(stm);
-							await link.FlashPartitionAsync(tok, reader, !nocompress, blocksize, offset, 3, false, link.DefaultTimeout, new EspProgress());
-						}
-						else
-						{
-							await link.FlashAsync(tok, stm, !nocompress,blocksize, offset, 3, false, link.DefaultTimeout, new EspProgress());
-						}
+							e.Cancel = true;
+							cts.Cancel();
+						};
+
+						var tok = cts.Token;
+						Console.WriteLine($"{CliUtility.AssemblyTitle} v{CliUtility.AssemblyVersion}");
 						Console.WriteLine();
-						Console.WriteLine("Hard resetting");
 						await Console.Out.FlushAsync();
-						await link.ResetAsync(tok);
+						Console.Write("Connecting...");
+						await Console.Out.FlushAsync();
+						link.SerialHandshake = handshake;
+						await link.ConnectAsync(EspConnectMode.Default, 3, false, tok, link.DefaultTimeout, new EspProgress());
+						Console.WriteLine("done!");
+						await Console.Out.FlushAsync();
+						Console.WriteLine("Running stub... ");
+						await Console.Out.FlushAsync();
+						await link.RunStubAsync(tok, link.DefaultTimeout, new EspProgress());
+						Console.WriteLine();
+						await Console.Out.FlushAsync();
+
+						if (baud != 115200)
+						{
+							await link.SetBaudRateAsync(baud, tok, link.DefaultTimeout);
+							Console.WriteLine($"Changed baud rate to {link.BaudRate}");
+						}
+						if (input.FullName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+						{
+							partition = true;
+						}
+						if (offset == 0xFFFFFFFF)
+						{
+							offset = partition ? (uint)0x8000 : 0x10000;
+						}
+						Console.WriteLine($"Flashing to offset 0x{offset:X}... ");
+						await Console.Out.FlushAsync();
+						using (FileStream stm = File.Open(input.FullName, FileMode.Open, FileAccess.Read))
+						{
+							var blocksize = chunk == 0 ? link.Device.FLASH_WRITE_SIZE : chunk * 1024;
+							var iscsv = partition && input.FullName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
+							if (iscsv)
+							{
+								TextReader reader = new StreamReader(stm);
+								await link.FlashPartitionAsync(tok, reader, !nocompress, blocksize, offset, 3, false, link.DefaultTimeout, new EspProgress());
+							}
+							else
+							{
+								await link.FlashAsync(tok, stm, !nocompress, blocksize, offset, 3, false, link.DefaultTimeout, new EspProgress());
+							}
+							Console.WriteLine();
+							Console.WriteLine("Hard resetting");
+							await Console.Out.FlushAsync();
+							await link.ResetAsync(tok);
+						}
 					}
 				}
 				return 0;

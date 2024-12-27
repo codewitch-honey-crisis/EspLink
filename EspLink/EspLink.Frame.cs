@@ -75,14 +75,13 @@ namespace EL
 				
 			}
 		}
-		
-		async Task<byte[]> ReadFrameAsync(CancellationToken cancellationToken, int timeout=-1)
+		async Task<byte[]> ReadFrameAsync(CancellationToken cancellationToken, int timeout = -1)
 		{
 			var bytes = new List<byte>();
 			var time = 0;
 			var foundStart = false;
-			// start grabbing frame data
-			while (true)
+			var inEscape = false;
+			while(true)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 				var i = ReadByteNoBlock();
@@ -95,66 +94,47 @@ namespace EL
 						throw new TimeoutException("The read operation timed out");
 					}
 					continue;
-				} 
+				}
+				time = 0;
+				if(inEscape)
+				{
+					switch(i)
+					{
+						case 0xDD:
+							bytes.Add(_FrameEscape);
+							break;
+						case 0xDC:
+							bytes.Add(_FrameDelimiter);
+							break;
+						default:
+							throw new IOException("Invalid data found in frame");
+						
+					}
+					inEscape = false;
+					continue;
+				}
 				if(!foundStart)
 				{
-					if(i == _FrameDelimiter)
+					if (i == _FrameDelimiter)
 					{
 						foundStart = true;
 						continue;
-						
 					}
-				} else
+				} else if(i==_FrameDelimiter)
 				{
-					if (i==_FrameDelimiter)
-					{
-						break;
-					}
-					bytes.Add((byte)i);
+					break;
 				}
-			}
-			int count = bytes.Count;
-			for (var i = 0; i < bytes.Count; i++)
-			{
-				var b = bytes[i];
-				if (b == _FrameEscape) { if(i<bytes.Count-1) --count; }
-			}
-			var result = new byte[count];
-			count = 0;
-			for (var i = 0; i < result.Length; ++i)
-			{
-				var b = bytes[i];
-				switch (b)
+				switch(i)
 				{
 					case _FrameEscape:
-						if (count >= result.Length - 1)
-						{
-							result[count++] = _FrameEscape;
-							break;
-						}
-						if (i < bytes.Count - 1)
-						{
-							b = bytes[++i];
-							switch (b)
-							{
-								case 0xDD:
-									result[count++] = _FrameEscape;
-									break;
-								case 0xDC:
-									result[count++] = _FrameDelimiter;
-									break;
-								default:
-									throw new IOException("Invalid escape content in frame");
-							}
-						} else
-						{
-							result[count++] = b;
-						}
+						inEscape = true;
+						continue;
+					default:
+						bytes.Add((byte)i);
 						break;
-					default: result[count++] = b; break;
 				}
 			}
-			return result;
+			return bytes.ToArray();
 		}
 	}
 }

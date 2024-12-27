@@ -14,17 +14,32 @@ namespace EspLinkUpdater
 			var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			var zipFile = Path.Combine(path, "esplink.zip");
 			var exeFile = iswin?Path.Combine(path, "esplink.exe"): Path.Combine(path, "esplink.dll");
-			var downloadFile = Path.Combine(path, "esplink.exe.download");
-			if(File.Exists(downloadFile))
+			var downloadFile = Path.Combine(path, "esplink.zip.download");
+			if (File.Exists(downloadFile))
 			{
-				try
+				if (!File.Exists(downloadFile))
 				{
-					File.Delete(exeFile);
+					Console.Error.WriteLine("Could not find downloaded content. Aborting update.");
+					return 2;
 				}
-				catch { };
+				using (var zip = ZipFile.OpenRead(downloadFile))
+				{
+					foreach (var entry in zip.Entries)
+					{
+						var entryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), entry.FullName);
+						try
+						{
+							if (File.Exists(entryPath))
+							{
+								File.Delete(entryPath);
+							}
+						}
+						catch { }
+					}
+				}
+				ZipFile.ExtractToDirectory(downloadFile, Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 				try
 				{
-					File.Move(downloadFile, exeFile);
 					ProcessStartInfo psi;
 					if (iswin)
 					{
@@ -35,7 +50,8 @@ namespace EspLinkUpdater
 							CreateNoWindow = true,
 							Arguments = "/finish_updater"
 						};
-					} else
+					}
+					else
 					{
 						psi = new ProcessStartInfo()
 						{
@@ -52,30 +68,20 @@ namespace EspLinkUpdater
 					return 1;
 				}
 			}
-			downloadFile = Path.Combine(path, "esplink.zip.download");
+			downloadFile = Path.Combine(path, "esplink.exe.download");
 			if (!File.Exists(downloadFile))
 			{
 				Console.Error.WriteLine("Could not find downloaded content. Aborting update.");
 				return 2;
 			}
-			using (var zip = ZipFile.OpenRead(downloadFile))
-			{
-				foreach(var entry in zip.Entries)
-				{
-					var entryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), entry.FullName);
-					try
-					{
-						if(File.Exists(entryPath))
-						{
-							File.Delete(entryPath);
-						}
-					}
-					catch { }
-				}
-			}
-			ZipFile.ExtractToDirectory(downloadFile, Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 			try
 			{
+				File.Delete(exeFile);
+			}
+			catch { };
+			try
+			{
+				File.Move(downloadFile, exeFile);
 				ProcessStartInfo psi;
 				if (iswin)
 				{
@@ -103,6 +109,7 @@ namespace EspLinkUpdater
 			{
 				return 1;
 			}
+
 		}
 	}
 }
