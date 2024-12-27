@@ -128,7 +128,12 @@ namespace EL
 			while ((line = await reader.ReadLineAsync()) != null)
 			{
 				line = line.Trim();
-				if (line.Length==0 || line.StartsWith("#")) { continue; }
+				int i = line.IndexOf('#');
+				if(i>-1)
+				{
+					line = line.Substring(0, i).Trim();
+				}
+				if (line.Length==0) { continue; }
 				var fields = line.Split(',');
 				string name="";
 				uint type=(uint)PartitionType.App;

@@ -462,7 +462,23 @@ namespace EL
 						Console.WriteLine($"{CliUtility.AssemblyTitle} v{CliUtility.AssemblyVersion}");
 						Console.WriteLine();
 						await Console.Out.FlushAsync();
-						Console.Write("Connecting...");
+						string hs;
+						switch (handshake) {
+							case Handshake.None:
+								hs = "no handshaking";
+								break;
+							case Handshake.RequestToSend:
+								hs = "hardware handshaking";
+								break;
+							case Handshake.XOnXOff:
+								hs = "software handshaking";
+								break;
+							default:
+								hs = "hardware and software handshaking";
+								break;
+						}
+						string sjt = link.IsUsbSerialJtag ? " (USB Serial JTAG)" : "";
+						Console.Write($"Connecting to {port}{sjt} with {hs}...");
 						await Console.Out.FlushAsync();
 						link.SerialHandshake = handshake;
 						await link.ConnectAsync(EspConnectMode.Default, 3, false, tok, link.DefaultTimeout, new EspProgress());
@@ -487,12 +503,14 @@ namespace EL
 						{
 							offset = partition ? (uint)0x8000 : 0x10000;
 						}
-						Console.WriteLine($"Flashing to offset 0x{offset:X}... ");
-						await Console.Out.FlushAsync();
 						using (FileStream stm = File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 						{
 							var blocksize = chunk == 0 ? link.Device.FLASH_WRITE_SIZE : chunk * 1024;
 							var iscsv = partition && input.FullName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
+							var part = iscsv ? "Parsing partition table and f" : "F";
+							Console.WriteLine($"{part}lashing to offset 0x{offset:X}... ");
+							await Console.Out.FlushAsync();
+
 							if (iscsv)
 							{
 								TextReader reader = new StreamReader(stm);
