@@ -6,6 +6,7 @@
     <Nullable>disable</Nullable>
     <AssemblyName>esplinklib</AssemblyName>
     <RootNamespace>EL</RootNamespace>
+    <Version>0.8.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
