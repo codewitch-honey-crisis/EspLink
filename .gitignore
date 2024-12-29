@@ -7,3 +7,7 @@
 /EspLinkResGen/obj/Debug
 /EspLinkResGen/obj/Release
 /.vs
+/EspLinkCore/bin
+/EspLinkCore/obj
+/EspLinkCoreLib/bin
+/EspLinkCoreLib/obj
