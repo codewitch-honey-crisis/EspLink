@@ -55,7 +55,7 @@ namespace EL
 				cancellationToken.ThrowIfCancellationRequested();
 				if (_isWindows)
 				{
-					// TODO: Showstopper. On Linux this hangs on Serial JTAG due to https://github.com/dotnet/runtime/issues/2037
+					// TODO: Showstopper. On Linux this hangs on Serial JTAG maybe due to https://github.com/dotnet/runtime/issues/2037 ?
 					port.WriteTimeout = timeout;
 					await port.BaseStream.WriteAsync(toWrite, 0, toWrite.Length);
 					cancellationToken.ThrowIfCancellationRequested();
@@ -63,7 +63,7 @@ namespace EL
 				} else
 				{
 					// Write timeout does not work with async on linux over serial jtag
-					
+					// USB Serial JTAG on linux blocks indefinitely on write under WSL. I have not been to try it on other linux instances yet.
 					port.WriteTimeout = timeout;
 					port.Write(toWrite, 0, toWrite.Length);
 					cancellationToken.ThrowIfCancellationRequested();

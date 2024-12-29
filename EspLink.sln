@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EspLinkUpdater", "EspLinkUp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EspLinkStubGen", "EspLinkResGen\EspLinkStubGen.csproj", "{062B967D-6EB4-4AB9-AA1A-867748BB57E5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EspLinkCoreLib", "EspLinkCoreLib\EspLinkCoreLib.csproj", "{BE5336F8-944A-4EA4-9DA2-58C8822A2244}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EspLinkCore", "EspLinkCore\EspLinkCore.csproj", "{F70CF7DA-32FC-4CAA-90D1-F24C5F63E82A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +35,14 @@ Global
 		{062B967D-6EB4-4AB9-AA1A-867748BB57E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{062B967D-6EB4-4AB9-AA1A-867748BB57E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{062B967D-6EB4-4AB9-AA1A-867748BB57E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE5336F8-944A-4EA4-9DA2-58C8822A2244}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE5336F8-944A-4EA4-9DA2-58C8822A2244}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE5336F8-944A-4EA4-9DA2-58C8822A2244}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE5336F8-944A-4EA4-9DA2-58C8822A2244}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F70CF7DA-32FC-4CAA-90D1-F24C5F63E82A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F70CF7DA-32FC-4CAA-90D1-F24C5F63E82A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F70CF7DA-32FC-4CAA-90D1-F24C5F63E82A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F70CF7DA-32FC-4CAA-90D1-F24C5F63E82A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

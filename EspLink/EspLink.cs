@@ -60,6 +60,13 @@ namespace EL
 		/// </summary>
 		public int DefaultTimeout { get; set; } = 5000;
 		
-
+		public uint FlashWriteBlockSize
+		{
+			get
+			{
+				CheckReady();
+				return Device.FLASH_WRITE_SIZE;
+			}
+		}
 	}
 }

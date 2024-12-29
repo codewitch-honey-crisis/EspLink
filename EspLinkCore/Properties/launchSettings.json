@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "EspLinkCore": {
+      "commandName": "Project",
+      "commandLineArgs": "COM20 s3.bin /type jtag"
+    }
+  }
+}

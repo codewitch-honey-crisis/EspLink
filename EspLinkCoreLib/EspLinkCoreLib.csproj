@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>esplinklib</AssemblyName>
+    <RootNamespace>EL</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\EspLink\Devices\Esp32Device.cs" Link="Devices\Esp32Device.cs" />
+    <Compile Include="..\EspLink\Devices\Esp32S3Device.cs" Link="Devices\Esp32S3Device.cs" />
+    <Compile Include="..\EspLink\EspDevice.cs" Link="EspDevice.cs" />
+    <Compile Include="..\EspLink\EspLink.Command.cs" Link="EspLink.Command.cs" />
+    <Compile Include="..\EspLink\EspLink.Connect.cs" Link="EspLink.Connect.cs" />
+    <Compile Include="..\EspLink\EspLink.cs" Link="EspLink.cs" />
+    <Compile Include="..\EspLink\EspLink.Device.cs" Link="EspLink.Device.cs" />
+    <Compile Include="..\EspLink\EspLink.Flash.cs" Link="EspLink.Flash.cs" />
+    <Compile Include="..\EspLink\EspLink.Frame.cs" Link="EspLink.Frame.cs" />
+    <Compile Include="..\EspLink\EspLink.Lifetime.cs" Link="EspLink.Lifetime.cs" />
+    <Compile Include="..\EspLink\EspLink.Memory.cs" Link="EspLink.Memory.cs" />
+    <Compile Include="..\EspLink\EspLink.Pack.cs" Link="EspLink.Pack.cs" />
+    <Compile Include="..\EspLink\EspLink.Partititions.cs" Link="EspLink.Partititions.cs" />
+    <Compile Include="..\EspLink\EspLink.Registers.cs" Link="EspLink.Registers.cs" />
+    <Compile Include="..\EspLink\EspLink.Reset.cs" Link="EspLink.Reset.cs" />
+    <Compile Include="..\EspLink\EspLink.SerialPort.cs" Link="EspLink.SerialPort.cs" />
+    <Compile Include="..\EspLink\EspLink.SpiFlash.cs" Link="EspLink.SpiFlash.cs" />
+    <Compile Include="..\EspLink\EspLink.Stub.cs" Link="EspLink.Stub.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Devices\" />
+    <Folder Include="Stubs\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\EspLink\Stubs\esp32.data" Link="Stubs\esp32.data" />
+    <EmbeddedResource Include="..\EspLink\Stubs\esp32.idx" Link="Stubs\esp32.idx" />
+    <EmbeddedResource Include="..\EspLink\Stubs\esp32.text" Link="Stubs\esp32.text" />
+    <EmbeddedResource Include="..\EspLink\Stubs\esp32s3.data" Link="Stubs\esp32s3.data" />
+    <EmbeddedResource Include="..\EspLink\Stubs\esp32s3.idx" Link="Stubs\esp32s3.idx" />
+    <EmbeddedResource Include="..\EspLink\Stubs\esp32s3.text" Link="Stubs\esp32s3.text" />
+  </ItemGroup>
+
+</Project>

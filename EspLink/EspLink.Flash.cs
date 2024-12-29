@@ -271,8 +271,8 @@ namespace EL
             var block = new byte[blockSize];
             for(int i = 0;i<blockCount;++i)
             {
-                // it's a memory stream so an async read would just be overhead
-                var bytesRead = stm.Read(block, 0, block.Length);
+                
+                var bytesRead = await stm.ReadAsync(block, 0, block.Length);
                 // pad any unread portion with 0xFF
                 for(int j = bytesRead;j<block.Length;++j)
                 {

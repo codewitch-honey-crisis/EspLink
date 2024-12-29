@@ -1,4 +1,5 @@
 ﻿using Cli;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -44,11 +45,11 @@ namespace EL
 		{
 			if (value is string str)
 			{
-				if(str.StartsWith("-") || str.Equals("0",StringComparison.Ordinal))
+				if (str.StartsWith("-") || str.Equals("0", StringComparison.Ordinal))
 				{
 					throw new Exception("The value must be positive");
 				}
-				if(str.Equals("none",StringComparison.Ordinal))
+				if (str.Equals("none", StringComparison.Ordinal))
 				{
 					return -1;
 				}
@@ -60,7 +61,7 @@ namespace EL
 	{
 		public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
 		{
-			if(sourceType == typeof(string))
+			if (sourceType == typeof(string))
 			{
 				return true;
 			}
@@ -70,20 +71,22 @@ namespace EL
 		{
 			if (value is string str)
 			{
-				if(0==string.Compare("hardware",str,StringComparison.OrdinalIgnoreCase))
+				if (0 == string.Compare("hardware", str, StringComparison.OrdinalIgnoreCase))
 				{
 					return Handshake.RequestToSend;
-				} else if (0 == string.Compare("software", str, StringComparison.OrdinalIgnoreCase))
+				}
+				else if (0 == string.Compare("software", str, StringComparison.OrdinalIgnoreCase))
 				{
 					return Handshake.XOnXOff;
 				}
 				else if (0 == string.Compare("both", str, StringComparison.OrdinalIgnoreCase))
 				{
 					return Handshake.RequestToSendXOnXOff;
-				} else if (0 == string.Compare("none", str, StringComparison.OrdinalIgnoreCase))
+				}
+				else if (0 == string.Compare("none", str, StringComparison.OrdinalIgnoreCase))
 				{
 					return Handshake.None;
-				} 
+				}
 			}
 			return base.ConvertFrom(context, culture, value);
 		}
@@ -121,31 +124,25 @@ namespace EL
 
 	class Program
 	{
-		static readonly Regex _scrapeTags = new Regex(@"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)<\/h2>",RegexOptions.IgnoreCase);
-		const string tagUrl = "https://github.com/codewitch-honey-crisis/EspLink/releases";
-		const string updateUrlFormat = "https://github.com/codewitch-honey-crisis/EspLink/releases/download/{0}/esplink.zip";
-		const string updateUrlFormatFallback = "https://github.com/codewitch-honey-crisis/EspLink/releases/download/{0}/esplink.exe";
-		[CmdArg("update",Group="update",Description ="Updates the application if a new version is available")]
-		static bool update = false;
 		[CmdArg("help", Group = "help", Description = "Displays this screen and exits")]
 		static bool help = false;
 		[CmdArg(Name = "ports", Group = "ports", ElementName = "ports", Description = "List the COM ports")]
 		static bool ports = false;
-		[CmdArg(Ordinal = 0,Optional =false,ElementName = "port",Description ="The COM port to use")]
+		[CmdArg(Ordinal = 0, Optional = false, ElementName = "port", Description = "The COM port to use")]
 		static string port = null;
-		[CmdArg(Ordinal = 1, Optional = false,ElementName ="file", Description ="The input file")]
+		[CmdArg(Ordinal = 1, Optional = false, ElementName = "file", Description = "The input file")]
 		static FileInfo input = null;
 		[CmdArg(Ordinal = 2, Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "offset", Description = "The flash address to load the file at. Defaults to 0x10000 (or 0x8000 for partitions)")]
 		static uint offset = 0xFFFFFFFF;
 		[CmdArg(Name = "chunk", Optional = true, ElementConverter = "EL.HexOrDecConverter", ElementName = "kilobytes", Description = "The size of blocks to use in kilobytes. Defaults to 16")]
 		static uint chunk = 0;
 		[CmdArg(Name = "baud", Optional = true, ElementName = "baud", Description = "The baud to upload at")]
-		static int baud = 115200*8;
+		static int baud = 115200 * 8;
 		[CmdArg(Name = "type", Optional = true, ElementName = "type", ElementConverter = "EL.SerialTypeConverter", Description = "The type of serial connection: auto (default), standard, or jtag")]
 		static EspSerialType serialType = EspSerialType.Autodetect;
-		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter ="EL.HandshakeConverter", Description = "The serial handshake to use: hardware (default), software, both or none.")]
+		[CmdArg(Name = "handshake", Optional = true, ElementName = "handshake", ElementConverter = "EL.HandshakeConverter", Description = "The serial handshake to use: hardware (default), software, both or none.")]
 		static Handshake handshake = Handshake.RequestToSend;
-		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", ElementConverter ="EL.TimeoutConverter", Description = "The timeout for I/O operations, in seconds or \"none\". Defaults to 5")]
+		[CmdArg(Name = "timeout", Optional = true, ElementName = "seconds", ElementConverter = "EL.TimeoutConverter", Description = "The timeout for I/O operations, in seconds or \"none\". Defaults to 5")]
 		static int timeout = 0;
 		[CmdArg(Name = "partition", Optional = true, ElementName = "partition", Description = "Flashes a partition table from a CSV or binary file")]
 		static bool partition = false;
@@ -154,7 +151,7 @@ namespace EL
 
 		internal class EspProgress : IProgress<int>
 		{
-			int _old=-1;
+			int _old = -1;
 			public EspProgress()
 			{
 			}
@@ -186,183 +183,10 @@ namespace EL
 				}
 			}
 		}
-		
-		static async Task DownloadVersionAsync(Version version)
-		{
-			var localpath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-			using (var http = new HttpClient())
-			{
-				var url = string.Format(updateUrlFormat, version.ToString());
-				try
-				{
-					using (var input = await http.GetStreamAsync(url))
-					{
-						var filepath = Path.Combine(localpath, "esplink.zip.download");
-						try
-						{
-							System.IO.File.Delete(filepath);
-						}
-						catch { }
-						using (var output = System.IO.File.OpenWrite(filepath))
-						{
-							await input.CopyToAsync(output);
-						}
-					}
-				}
-				catch
-				{
-					url = string.Format(updateUrlFormatFallback, version.ToString());
-					using (var input = await http.GetStreamAsync(url))
-					{
-						var filepath = Path.Combine(localpath, "esplink.exe.download");
-						try
-						{
-							System.IO.File.Delete(filepath);
-						}
-						catch { }
-						using (var output = System.IO.File.OpenWrite(filepath))
-						{
-							await input.CopyToAsync(output);
-						}
-					}
-				}
-			}
-		}
-		static async Task<Version> TryGetLaterVersionAsync()
-		{
-			try
-			{
-				var ver = Assembly.GetExecutingAssembly().GetName().Version;
-				using (var http = new HttpClient())
-				{
-					var versions = new List<Version>();
-					using (var reader = new StreamReader(await http.GetStreamAsync(tagUrl)))
-					{
-						var match = _scrapeTags.Match(reader.ReadToEnd());
-						while (match.Success)
-						{
-							Version v;
-							if (Version.TryParse(match.Groups[1].Value, out v))
-							{
-								versions.Add(v);
-							}
-							match = match.NextMatch();
-						}
-					}
-					versions.Sort();
-					var result = versions[versions.Count - 1];
-					if (result > ver)
-					{
-						return result;
-					}
-				}
-			}
-			catch { }
-			return new Version();
-		}
-		static async Task ExtractUpdaterAsync()
-		{
-			var localpath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			var names = Assembly.GetExecutingAssembly().GetManifestResourceNames();
-			foreach(var name in names)
-			{
-				if (name.Contains("EspLinkUpdater"))
-				{
-					using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
-					{
-						if (input == null)
-						{
-							throw new Exception("Could not extract updater");
-						}
-						var fname = name;
-						var idx = fname.IndexOf('.');
-						if(idx>-1)
-						{
-							fname = fname.Substring(idx+1);
-						}
-						try
-						{
-							File.Delete(fname);
-						}
-						catch { }
-						using (var output = System.IO.File.OpenWrite(Path.Combine(localpath, fname)))
-						{
-							await input.CopyToAsync(output);
-						}
-					}
-				}
-			}
-		}
 		static async Task<int> Main(string[] args)
 		{
-			string updaterpath;
-			if (CliUtility.IsWindows)
-			{
-				updaterpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.exe");
-			}
-			else
-			{
-				updaterpath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.dll");
-			}
-
-			// in case we just updated:
-			if (args.Length == 1)
-			{
-				if (args[0] == "/finish_updater" || args[0]=="--finish_updater")
-				{
-					try
-					{
-						foreach (var file in Directory.GetFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "EspLinkUpdater.*")) {
-							try
-							{
-								if (System.IO.File.Exists(file))
-								{
-									System.IO.File.Delete(file);
-								}
-							}
-							catch
-							{
-							}
-						}
-						foreach (var file in Directory.GetFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "*.download"))
-						{
-							try
-							{
-								if (System.IO.File.Exists(file))
-								{
-									System.IO.File.Delete(file);
-								}
-							}
-							catch
-							{
-							}
-						}
-						try
-						{
-							var file = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "esplink.zip");
-							if (System.IO.File.Exists(file))
-							{
-								System.IO.File.Delete(file);
-							}
-						}
-						catch
-						{
-						}
-						foreach (var file in Directory.GetFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "esplink.zip"))
-						{
-
-						}
-						Console.WriteLine("Application updated");
-					}
-					catch
-					{
-						Console.WriteLine("Warning: Could not delete temporary files.");
-
-						return 0;
-					}
-				}
-			}
+			
 #if !DEBUG
 			try
 			{
@@ -370,50 +194,15 @@ namespace EL
 				CliUtility.ParseAndSet(args, null, typeof(Program));
 #if !DEBUG
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
-				Console.Error.WriteLine("Error: "+ex.Message);
+				Console.Error.WriteLine("Error: " + ex.Message);
 				return 1;
 			}
 #endif
-			if(help)
+			if (help)
 			{
-				CliUtility.PrintUsage(CliUtility.GetSwitches(null,typeof(Program)));
-				var latest = await TryGetLaterVersionAsync();
-
-				if (Assembly.GetExecutingAssembly().GetName().Version < latest)
-				{
-					Console.WriteLine();
-					Console.WriteLine("An update is available.");
-				
-				}
-				return 0;
-			}
-			if (update)
-			{
-				var latest = await TryGetLaterVersionAsync();
-				if (Assembly.GetExecutingAssembly().GetName().Version < latest)
-				{
-					await DownloadVersionAsync(latest);
-					await ExtractUpdaterAsync();
-					var psi = new ProcessStartInfo()
-					{
-						FileName = CliUtility.IsWindows?updaterpath:"dotnet",
-						CreateNoWindow = true,
-						Arguments=""
-					};
-					if(!CliUtility.IsWindows)
-					{
-						psi.Arguments += updaterpath;
-					}
-					Console.WriteLine("Updating esplink...");
-					var proc = Process.Start(psi);
-				}
-				else
-				{
-					Console.WriteLine("A later version was not available. No update was performed.");
-					return 1;
-				}
+				CliUtility.PrintUsage(CliUtility.GetSwitches(null, typeof(Program)));
 				return 0;
 			}
 			if (ports)
@@ -424,15 +213,15 @@ namespace EL
 				foreach (var port in EspLink.GetPorts())
 				{
 					Console.WriteLine(port);
-					
+
 				}
 				return 0;
 			}
 			try
 			{
-				if(!input.FullName.StartsWith("\\\\") && !File.Exists(input.FullName))
+				if (!input.FullName.StartsWith("\\\\") && !File.Exists(input.FullName))
 				{
-					throw new FileNotFoundException("The input file \""+input.Name+"\" could not be found", input.FullName);
+					throw new FileNotFoundException("The input file \"" + input.Name + "\" could not be found", input.FullName);
 				}
 				using (var link = new EspLink(port, serialType))
 				{
@@ -441,14 +230,7 @@ namespace EL
 						chunk = 16;
 					}
 					link.DefaultTimeout = timeout == -1 ? -1 : timeout == 0 ? 5000 : timeout * 1000;
-					var latest = await TryGetLaterVersionAsync();
-
-					if (Assembly.GetExecutingAssembly().GetName().Version < latest)
-					{
-						var sp = CliUtility.SwitchPrefix;
-						Console.WriteLine($"An update is available. Run with {sp}update to update the utility.");
-						Console.WriteLine();
-					}
+					
 					using (var cts = new CancellationTokenSource())
 					{
 
@@ -463,7 +245,8 @@ namespace EL
 						Console.WriteLine();
 						await Console.Out.FlushAsync();
 						string hs;
-						switch (handshake) {
+						switch (handshake)
+						{
 							case Handshake.None:
 								hs = "no handshaking";
 								break;
@@ -505,7 +288,7 @@ namespace EL
 						}
 						using (FileStream stm = File.Open(input.FullName, FileMode.Open, FileAccess.Read))
 						{
-							var blocksize = chunk == 0 ? link.FlashWriteBlockSize : chunk * 1024;
+							var blocksize = chunk == 0 ? link.FlashWriteBlockSize: chunk * 1024;
 							var iscsv = partition && input.FullName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
 							var part = iscsv ? "Parsing partition table and f" : "F";
 							Console.WriteLine($"{part}lashing to offset 0x{offset:X}... ");
@@ -540,7 +323,7 @@ namespace EL
 			{
 				CliUtility.PrintUsage(CliUtility.GetSwitches(null, typeof(Program)));
 				Console.WriteLine();
-				Console.Error.WriteLine("Error: "+ex.Message);
+				Console.Error.WriteLine("Error: " + ex.Message);
 				return 1;
 			}
 #endif
